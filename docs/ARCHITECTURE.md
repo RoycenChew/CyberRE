@@ -209,8 +209,8 @@ hard-coded paths, model names, provider logic or credentials.
 | M3 | Storage, replay, deterministic fixtures | **complete** |
 | M4 | Capability registry, policy engine, approval gateway | **complete** |
 | M5 | Analysis profiles | **complete** |
-| M6 | Ghidra adapter, fixtures, real-tool spec | next |
-| M7 | RE knowledge layer | |
+| M6 | Ghidra adapter, fixtures, real-tool spec | **complete** (realtool tier unverified - Ghidra not installed) |
+| M7 | RE knowledge layer | next |
 | M8 | Source security capabilities | |
 | M9 | Model gateway, LangGraph runtime | needs provider key |
 | M10 | Validation engine, requirement sets | |

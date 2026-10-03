@@ -39,6 +39,10 @@ include = ["cyberre*", "devplane*"]
 line-length = 100
 target-version = "py312"
 src = ["cyberre", "devplane", "tests"]
+# Ghidra scripts run inside Ghidra's Jython 2.7 interpreter against injected
+# globals. They are not part of this interpreter's world and must not be
+# linted or type-checked against it.
+extend-exclude = ["cyberre/adapters/ghidra/scripts"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "SIM", "TID", "RUF"]
@@ -50,6 +54,7 @@ ban-relative-imports = "all"
 [tool.mypy]
 python_version = "3.12"
 packages = ["cyberre", "devplane"]
+exclude = ["cyberre/adapters/ghidra/scripts/"]
 warn_unused_configs = true
 warn_redundant_casts = true
 warn_unused_ignores = true

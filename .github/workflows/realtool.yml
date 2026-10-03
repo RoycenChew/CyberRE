@@ -2,22 +2,68 @@ name: Real tool tier
 
 # Fixtures prove our parsers. Only this workflow proves that the real external
 # tools behave as the adapters assume. A release may not claim production
-# readiness until this tier passes (docs/ARCHITECTURE.md, ADR-004).
+# readiness until this tier passes (ADR-004).
+#
+# It is expected to report skips until GHIDRA_INSTALL_DIR is provisioned. The
+# skip reasons say so explicitly, because a silently skipped tier is
+# indistinguishable from a passing one in a CI summary.
 
 on:
   schedule:
     - cron: "0 3 * * *"
   workflow_dispatch:
+    inputs:
+      ghidra_version:
+        description: Ghidra version to install
+        default: "11.1.2"
 
 permissions:
   contents: read
 
 jobs:
-  realtool:
-    name: Real external tools
+  ghidra:
+    name: Ghidra (live)
     runs-on: ubuntu-latest
-    # Enabled from M6 once the Ghidra adapter and its install step exist.
-    if: false
     steps:
       - uses: actions/checkout@v4
-      - run: echo "Placeholder - populated by M6 (Ghidra) and M13 (sandbox)."
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install Ghidra
+        id: ghidra
+        continue-on-error: true
+        env:
+          VERSION: ${{ github.event.inputs.ghidra_version || '11.1.2' }}
+        run: |
+          set -euo pipefail
+          # Pinned release asset. A moving "latest" would mean the tier tested
+          # something different each night, which defeats its purpose.
+          url="https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_${VERSION}_build/ghidra_${VERSION}_PUBLIC_20240709.zip"
+          curl -fsSL -o ghidra.zip "$url"
+          unzip -q ghidra.zip -d "$HOME/ghidra"
+          echo "GHIDRA_INSTALL_DIR=$HOME/ghidra/ghidra_${VERSION}_PUBLIC" >> "$GITHUB_ENV"
+
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Real tool tests
+        run: pytest -m realtool -rs
+
+      - name: Report whether the tier actually ran
+        if: always()
+        run: |
+          if [ -z "${GHIDRA_INSTALL_DIR:-}" ]; then
+            echo "::warning::Ghidra was not installed; the Ghidra integration is UNVERIFIED."
+          else
+            echo "Ghidra integration exercised against $GHIDRA_INSTALL_DIR"
+          fi
