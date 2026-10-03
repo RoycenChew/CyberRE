@@ -207,8 +207,8 @@ hard-coded paths, model names, provider logic or credentials.
 | M1 | Core contracts, typed models, trust model | **complete** |
 | M2 | Evidence, provenance, evidence graph | **complete** |
 | M3 | Storage, replay, deterministic fixtures | **complete** |
-| M4 | Capability registry, policy engine, approval gateway | next |
-| M5 | Analysis profiles | |
+| M4 | Capability registry, policy engine, approval gateway | **complete** |
+| M5 | Analysis profiles | next |
 | M6 | Ghidra adapter, fixtures, real-tool spec | |
 | M7 | RE knowledge layer | |
 | M8 | Source security capabilities | |
@@ -253,7 +253,8 @@ until something exists that can reject a finding (ADR-002).
 23. Security regression tests exist.
 24. Supply-chain security is part of enterprise readiness.
 
-Invariants 1, 2, 6, 7, 9, 10 and 11 are enforced today by `cyberre/core/trust`
+Invariants 1-4, 6, 7, 9, 10 and 11 are enforced today by `cyberre/core/trust`,
+`cyberre/core/policies`
 and the domain models, with tests in `tests/unit/` and `tests/contract/`.
 Invariants 12-19 are enforced by `tests/architecture/`. The remainder are
 enforced by the milestone that introduces the component, and each milestone's
