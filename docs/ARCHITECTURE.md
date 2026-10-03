@@ -205,8 +205,8 @@ hard-coded paths, model names, provider logic or credentials.
 |---|---|---|
 | M0 | Foundation, CI, boundary rules | **complete** |
 | M1 | Core contracts, typed models, trust model | **complete** |
-| M2 | Evidence, provenance, evidence graph | next |
-| M3 | Storage, replay, deterministic fixtures | |
+| M2 | Evidence, provenance, evidence graph | **complete** |
+| M3 | Storage, replay, deterministic fixtures | next |
 | M4 | Capability registry, policy engine, approval gateway | |
 | M5 | Analysis profiles | |
 | M6 | Ghidra adapter, fixtures, real-tool spec | |

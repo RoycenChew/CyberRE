@@ -23,6 +23,7 @@ by writing a new ADR that supersedes the old one, never by editing history.
 | [016](ADR-016-independence-key-stored.md) | Evidence independence is a stored field |
 | [017](ADR-017-knowledge-provenance.md) | Knowledge records carry provenance and applicability |
 | [018](ADR-018-provider-data-residency.md) | Model provider data residency; bridges are dev-only |
+| [019](ADR-019-graph-in-stdlib.md) | The evidence graph is implemented in the standard library |
 
 ADRs 013-017 record divergences from the original design document in
 [`../prompts/`](../prompts/), per the requirement that conflicts be documented
