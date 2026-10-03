@@ -34,7 +34,10 @@ VENDOR_PACKAGES: dict[str, tuple[str, ...]] = {
     # Workflow runtime - graph layer only (invariant 15).
     "langgraph": ("cyberre.agent.graph",),
     "langchain_core": ("cyberre.agent.graph",),
-    # Storage engines - adapters only (invariant 17).
+    # Storage engines - adapters only (invariant 17). sqlite3 is in the
+    # standard library, which does not make it less of an engine choice: core
+    # must not know which database is underneath it (ADR-020).
+    "sqlite3": ("cyberre.adapters.storage",),
     "sqlalchemy": ("cyberre.adapters.storage",),
     "alembic": ("cyberre.adapters.storage",),
     "psycopg": ("cyberre.adapters.storage",),
