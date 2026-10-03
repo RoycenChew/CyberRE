@@ -1,0 +1,34 @@
+# Dependency and SBOM analysis.
+#
+# The profile most prone to false positives, because a package name matching a
+# CVE is trivially easy and means almost nothing. Its requirement sets demand
+# version range and configuration conditions separately.
+
+profile_id  = "dependency_security"
+name        = "Dependency Security"
+description = "Determine whether declared dependencies are actually affected by known vulnerabilities."
+implemented = true
+
+applicable_artefact_types = ["dependency_manifest", "source_tree"]
+default_depth             = "fast"
+
+preferred_capabilities = [
+    "deps.parse_manifest",
+    "deps.resolve_tree",
+    "deps.match_advisories",
+]
+
+hypothesis_classes = ["cve:applicability"]
+
+knowledge_sources = [
+    "knowledge.threat.cve",
+    "knowledge.threat.cvss",
+]
+
+[requirement_sets]
+"cve:applicability" = "req.cve.applicability"
+
+
+[policy]
+max_risk_level          = "l1_local_static"
+approval_required_above = "l1_local_static"

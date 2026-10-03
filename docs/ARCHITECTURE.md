@@ -146,7 +146,7 @@ replacing the runtime cannot remove it.
 
 ## 7. Analysis profiles
 
-Declarative YAML, not agents. Fully implemented in V1: `BINARY_RE`,
+Declarative TOML, not agents (ADR-021). Fully implemented in V1: `BINARY_RE`,
 `SOURCE_SECURITY`, `DEPENDENCY_SECURITY`, `MALWARE_ANALYSIS` (static only).
 Declared but failing explicitly: `VULNERABILITY_RESEARCH`, `THREAT_HUNTING`,
 `INCIDENT_INVESTIGATION`. Multiple active profiles union requirements and
@@ -208,8 +208,8 @@ hard-coded paths, model names, provider logic or credentials.
 | M2 | Evidence, provenance, evidence graph | **complete** |
 | M3 | Storage, replay, deterministic fixtures | **complete** |
 | M4 | Capability registry, policy engine, approval gateway | **complete** |
-| M5 | Analysis profiles | next |
-| M6 | Ghidra adapter, fixtures, real-tool spec | |
+| M5 | Analysis profiles | **complete** |
+| M6 | Ghidra adapter, fixtures, real-tool spec | next |
 | M7 | RE knowledge layer | |
 | M8 | Source security capabilities | |
 | M9 | Model gateway, LangGraph runtime | needs provider key |

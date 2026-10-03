@@ -1,0 +1,7 @@
+# Declared, not implemented. See vulnerability_research.toml for why stubs
+# are declared rather than omitted.
+
+profile_id  = "incident_investigation"
+name        = "Incident Investigation"
+description = "Scope and timeline reconstruction for a suspected compromise. Not implemented in V1."
+implemented = false

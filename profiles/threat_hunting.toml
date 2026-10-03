@@ -1,0 +1,7 @@
+# Declared, not implemented. See vulnerability_research.toml for why stubs
+# are declared rather than omitted.
+
+profile_id  = "threat_hunting"
+name        = "Threat Hunting"
+description = "Hypothesis-driven search for adversary activity across telemetry. Not implemented in V1."
+implemented = false

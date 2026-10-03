@@ -1,0 +1,41 @@
+# Source code security analysis.
+
+profile_id  = "source_security"
+name        = "Source Security"
+description = "Find and validate security weaknesses in source code."
+implemented = true
+
+applicable_artefact_types = ["source_tree", "source_file"]
+default_depth             = "standard"
+
+preferred_capabilities = [
+    "semgrep.scan",
+    "secrets.scan",
+    "source.data_flow",
+    "source.reachability",
+]
+
+hypothesis_classes = [
+    "cwe:78",
+    "cwe:89",
+    "cwe:22",
+    "cwe:502",
+    "cwe:798",
+]
+
+knowledge_sources = [
+    "knowledge.threat.cwe",
+    "knowledge.threat.owasp",
+]
+
+[requirement_sets]
+"cwe:78"  = "req.cwe.78"
+"cwe:89"  = "req.cwe.89"
+"cwe:22"  = "req.cwe.22"
+"cwe:502" = "req.cwe.502"
+"cwe:798" = "req.cwe.798"
+
+
+[policy]
+max_risk_level          = "l1_local_static"
+approval_required_above = "l1_local_static"

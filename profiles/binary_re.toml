@@ -1,0 +1,58 @@
+# Binary reverse engineering.
+#
+# Preferences are ordered: cheap structural facts first, decompilation only
+# once there is a reason to look at a particular function. Decompiling a whole
+# binary up front is the standard way these systems become unusable on
+# anything large.
+
+profile_id  = "binary_re"
+name        = "Binary Reverse Engineering"
+description = "Understand what a compiled program does and identify security-relevant behaviour."
+implemented = true
+
+applicable_artefact_types = ["pe", "elf", "macho"]
+default_depth             = "standard"
+
+preferred_capabilities = [
+    "binfmt.metadata",
+    "binfmt.sections",
+    "binfmt.imports",
+    "binfmt.strings",
+    "ghidra.analyze_binary",
+    "ghidra.call_graph",
+    "ghidra.cross_references",
+    "ghidra.decompile_function",
+]
+
+hypothesis_classes = [
+    "behaviour:process_injection",
+    "behaviour:persistence",
+    "behaviour:credential_access",
+    "behaviour:anti_analysis",
+    "cwe:787",
+]
+
+knowledge_sources = [
+    "knowledge.re.formats",
+    "knowledge.re.arch",
+    "knowledge.re.compilers",
+    "knowledge.re.apis",
+    "knowledge.threat.attack",
+    "knowledge.threat.cwe",
+]
+
+[requirement_sets]
+"behaviour:process_injection" = "req.behaviour.process_injection"
+"behaviour:persistence"       = "req.behaviour.persistence"
+"behaviour:credential_access" = "req.behaviour.credential_access"
+"behaviour:anti_analysis"     = "req.behaviour.anti_analysis"
+"cwe:787"                     = "req.cwe.787"
+
+
+[policy]
+# Static analysis only. Reverse engineering a binary does not require running
+# it, and the profile should not ask for more than it needs.
+max_risk_level           = "l1_local_static"
+approval_required_above  = "l1_local_static"
+wants_sandbox            = false
+wants_network            = false
