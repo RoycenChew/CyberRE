@@ -48,3 +48,9 @@ jobs:
         # exercised by the realtool workflow, not here. Fixture tests prove
         # parsing; they never stand in for real-tool behaviour (ADR-004).
         run: pytest -m "not realtool" --cov --cov-report=term-missing
+
+      # The core is where the architecture invariants live, so it carries the
+      # strictest coverage contract. An invariant guarded by untested code is
+      # an invariant on paper.
+      - name: Core coverage floor
+        run: pytest -m "not realtool" --cov=cyberre.core --cov-fail-under=90 -q

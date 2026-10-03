@@ -14,7 +14,12 @@ license = { text = "Proprietary" }
 # Each dependency is introduced by the milestone that needs it, with a
 # documented purpose (see docs/SUPPLY_CHAIN.md and the dependency policy
 # in docs/ARCHITECTURE.md).
-dependencies = []
+dependencies = [
+  # Typed domain contracts. Every object crossing a module boundary is a
+  # validated model, which is how provenance and trust levels are made
+  # non-optional rather than conventional. (M1)
+  "pydantic>=2.7",
+]
 
 [project.optional-dependencies]
 dev = [
