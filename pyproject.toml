@@ -1,0 +1,86 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cyberre"
+version = "0.1.0.dev0"
+description = "Evidence-first AI cybersecurity and reverse-engineering investigation platform"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { text = "Proprietary" }
+
+# M0 intentionally declares no runtime dependencies.
+# Each dependency is introduced by the milestone that needs it, with a
+# documented purpose (see docs/SUPPLY_CHAIN.md and the dependency policy
+# in docs/ARCHITECTURE.md).
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "ruff>=0.6",
+  "mypy>=1.11",
+]
+
+[project.scripts]
+cyberre = "cyberre.cli.main:app"
+
+[tool.setuptools.packages.find]
+include = ["cyberre*", "devplane*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["cyberre", "devplane", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "SIM", "TID", "RUF"]
+ignore = ["E501"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.mypy]
+python_version = "3.12"
+packages = ["cyberre", "devplane"]
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+no_implicit_reexport = true
+
+# Strict mode on the domain core. The core is the part of the system whose
+# correctness the architecture invariants depend on, so it carries the
+# strictest typing contract. See docs/ARCHITECTURE.md section "Code Quality".
+[[tool.mypy.overrides]]
+module = "cyberre.core.*"
+disallow_untyped_defs = true
+disallow_any_generics = true
+disallow_untyped_calls = true
+disallow_incomplete_defs = true
+strict_equality = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--strict-markers -q"
+markers = [
+  "unit: pure logic, no I/O",
+  "contract: protocol conformance, run against every implementation",
+  "integration: multiple components with real local storage",
+  "fixture: recorded tool output; proves parsing, never real-tool behaviour",
+  "realtool: requires a real external tool (Ghidra, Semgrep, Docker) to be installed",
+  "requires_ghidra: requires a real Ghidra installation",
+  "requires_docker: requires a working Docker daemon",
+  "security: security control enforcement",
+  "injection: prompt-injection resistance",
+  "evaluation: benchmark corpus",
+  "architecture: structural and dependency-direction rules",
+]
+
+[tool.coverage.run]
+branch = true
+source = ["cyberre", "devplane"]
+
+[tool.coverage.report]
+show_missing = true

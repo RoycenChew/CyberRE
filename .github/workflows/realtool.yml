@@ -1,0 +1,23 @@
+name: Real tool tier
+
+# Fixtures prove our parsers. Only this workflow proves that the real external
+# tools behave as the adapters assume. A release may not claim production
+# readiness until this tier passes (docs/ARCHITECTURE.md, ADR-004).
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  realtool:
+    name: Real external tools
+    runs-on: ubuntu-latest
+    # Enabled from M6 once the Ghidra adapter and its install step exist.
+    if: false
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Placeholder - populated by M6 (Ghidra) and M13 (sandbox)."

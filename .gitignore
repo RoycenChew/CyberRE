@@ -1,0 +1,33 @@
+# Secrets - never commit. See docs/SECURITY.md.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+
+# Tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# CyberRE runtime artefacts (investigations hold untrusted artefact content)
+.cyberre/
+objectstore/
+*.sqlite
+*.sqlite3
+*.db
+
+# Analysis scratch
+scratch/
