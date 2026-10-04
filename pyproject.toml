@@ -82,6 +82,7 @@ markers = [
   "realtool: requires a real external tool (Ghidra, Semgrep, Docker) to be installed",
   "requires_ghidra: requires a real Ghidra installation",
   "requires_docker: requires a working Docker daemon",
+  "requires_semgrep: requires semgrep to be installed",
   "security: security control enforcement",
   "injection: prompt-injection resistance",
   "evaluation: benchmark corpus",

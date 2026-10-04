@@ -1,0 +1,97 @@
+{
+  "version": "1.52.0",
+  "results": [
+    {
+      "check_id": "python.lang.security.audit.dangerous-subprocess-use.dangerous-subprocess-use",
+      "path": "app/views.py",
+      "start": {
+        "line": 42,
+        "col": 5
+      },
+      "end": {
+        "line": 42,
+        "col": 48
+      },
+      "extra": {
+        "message": "Detected subprocess function 'call' with user-controlled input.",
+        "severity": "ERROR",
+        "metadata": {
+          "cwe": [
+            "CWE-78: Improper Neutralization of Special Elements used in an OS Command"
+          ],
+          "owasp": [
+            "A03:2021 - Injection"
+          ]
+        },
+        "lines": "    subprocess.call(f'ping -c 1 {host}', shell=True)"
+      }
+    },
+    {
+      "check_id": "python.django.security.audit.avoid-raw-sql.avoid-raw-sql",
+      "path": "app/reports.py",
+      "start": {
+        "line": 88,
+        "col": 9
+      },
+      "end": {
+        "line": 90,
+        "col": 10
+      },
+      "extra": {
+        "message": "Raw SQL query detected. Verify parameters are escaped.",
+        "severity": "WARNING",
+        "metadata": {
+          "cwe": [
+            "CWE-89: SQL Injection"
+          ]
+        },
+        "lines": "    cursor.execute('SELECT * FROM report WHERE id = %s', [report_id])"
+      }
+    },
+    {
+      "check_id": "python.lang.security.audit.eval-detected.eval-detected",
+      "path": "app/legacy.py",
+      "start": {
+        "line": 15,
+        "col": 1
+      },
+      "end": {
+        "line": 15,
+        "col": 20
+      },
+      "extra": {
+        "message": "Detected the use of eval().",
+        "severity": "ERROR",
+        "metadata": {
+          "cwe": [
+            "CWE-95"
+          ]
+        }
+      }
+    },
+    {
+      "check_id": "broken.rule",
+      "path": "app/x.py"
+    }
+  ],
+  "errors": [
+    {
+      "type": "SourceParseError",
+      "message": "app/generated_pb2.py: could not parse file"
+    }
+  ],
+  "paths": {
+    "scanned": [
+      "app/views.py",
+      "app/reports.py",
+      "app/legacy.py",
+      "app/x.py"
+    ],
+    "skipped": [
+      {
+        "path": "app/huge.json",
+        "reason": "exceeded size limit"
+      }
+    ]
+  }
+}

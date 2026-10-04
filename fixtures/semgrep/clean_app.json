@@ -1,0 +1,11 @@
+{
+  "version": "1.52.0",
+  "results": [],
+  "errors": [],
+  "paths": {
+    "scanned": [
+      "app/safe.py"
+    ],
+    "skipped": []
+  }
+}

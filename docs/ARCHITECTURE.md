@@ -211,8 +211,8 @@ hard-coded paths, model names, provider logic or credentials.
 | M5 | Analysis profiles | **complete** |
 | M6 | Ghidra adapter, fixtures, real-tool spec | **complete** (realtool tier unverified - Ghidra not installed) |
 | M7 | RE knowledge layer | **complete** |
-| M8 | Source security capabilities | next |
-| M9 | Model gateway, LangGraph runtime | needs provider key |
+| M8 | Source security capabilities | **complete** (realtool tier unverified - Semgrep not installed) |
+| M9 | Model gateway, LangGraph runtime | next - needs provider key for live use |
 | M10 | Validation engine, requirement sets | |
 | M11 | Adversarial reviewer, confidence engine | |
 | M12 | **Dual vertical slice** - source + binary, through validation | needs Ghidra |

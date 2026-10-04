@@ -59,6 +59,10 @@ jobs:
       - name: Real tool tests
         run: pytest -m realtool -rs
 
+      - name: Install Semgrep
+        continue-on-error: true
+        run: pip install semgrep
+
       - name: Report whether the tier actually ran
         if: always()
         run: |
