@@ -213,8 +213,8 @@ hard-coded paths, model names, provider logic or credentials.
 | M7 | RE knowledge layer | **complete** |
 | M8 | Source security capabilities | **complete** (realtool tier unverified - Semgrep not installed) |
 | M9 | Model gateway, investigation runtime | **complete** (plain loop, ADR-022) |
-| M10 | Validation engine, requirement sets | next |
-| M11 | Adversarial reviewer, confidence engine | |
+| M10 | Validation engine, requirement sets | **complete** |
+| M11 | Adversarial reviewer, confidence engine | next |
 | M12 | **Dual vertical slice** - source + binary, through validation | needs Ghidra |
 | M13 | Sandbox, dynamic analysis | |
 | M14 | Evaluation, benchmark, FP/FN, injection regression | |
