@@ -146,15 +146,22 @@ class TestInvestigate:
         run("investigate", "q", "--path", str(tmp_path), "--offline")
         assert "nothing was validated" in capsys.readouterr().out
 
-    def test_a_partial_run_exits_non_zero(
+    def test_the_exit_code_matches_the_reported_status(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
     ) -> None:
         """Absence of a finding in a partial run is not evidence of absence,
-        and a green exit code would tell a pipeline otherwise."""
+        and a green exit code would tell a pipeline otherwise.
+
+        Asserted against what the report says rather than against a fixed
+        code, because whether a run is partial depends on which tools are
+        installed on the machine running the test.
+        """
         (tmp_path / "app.py").write_text(TRIVIAL_SOURCE, encoding="utf-8")
         code = run("investigate", "q", "--path", str(tmp_path), "--offline")
-        capsys.readouterr()
-        assert code == EXIT_PARTIAL
+        out = capsys.readouterr().out
+
+        reported_partial = "**This investigation is partial.**" in out
+        assert code == (EXIT_PARTIAL if reported_partial else EXIT_OK)
 
     def test_a_secret_is_not_disclosed_in_the_report(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]

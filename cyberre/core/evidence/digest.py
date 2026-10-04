@@ -30,9 +30,20 @@ VOLATILE_EVIDENCE_FIELDS = frozenset(
 
 #: Provenance fields that vary per run. ``collected_at`` is a timestamp and
 #: ``invocation_id`` identifies the execution, not the observation.
-#: ``raw_output_ref`` is kept: it is a content hash, so a change in it means
-#: the tool genuinely produced different output.
-VOLATILE_PROVENANCE_FIELDS = frozenset({"collected_at", "invocation_id"})
+#:
+#: ``raw_output_ref`` is excluded too, which corrects an earlier assumption.
+#: It was kept on the reasoning that a content hash only changes when the
+#: tool produced different output - and that is false for any tool whose
+#: output embeds run metadata. Semgrep's JSON carries scan timings and
+#: environment detail, so two runs finding exactly the same issue produce
+#: different envelope hashes. Including it made every investigation look
+#: unreproducible while nothing about the analysis had changed.
+#:
+#: The reference is still stored and still reported; it just does not
+#: define content identity. What was observed is the observation, the
+#: location, the tool and its version - not the byte-level shape of the
+#: tool's report.
+VOLATILE_PROVENANCE_FIELDS = frozenset({"collected_at", "invocation_id", "raw_output_ref"})
 
 VOLATILE_FINDING_FIELDS = frozenset(
     {

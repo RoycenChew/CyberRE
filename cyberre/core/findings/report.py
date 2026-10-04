@@ -208,9 +208,11 @@ class ReportGenerator:
             )
         else:
             lines.append(
-                "The investigation produced no hypotheses to examine. This may mean "
-                "the artefact is sound, or that the capabilities available could not "
-                "see enough of it - the scope and limitations sections say which."
+                "The investigation established no findings and has none to report "
+                "as examined-and-unsupported. This may mean the artefact is sound, "
+                "or that the available capabilities could not see enough of it, or "
+                "that proposed hypotheses did not survive verification. The "
+                "observations and limitations sections say which."
             )
 
         if partial:
@@ -227,6 +229,23 @@ class ReportGenerator:
         lines.append(f"- Evidence collected: {len(state.evidence_ids)}")
         if state.profiles:
             lines.append("- Profiles: " + ", ".join(p.value for p in state.profiles))
+
+        # Every capability that ran, including the ones that found nothing.
+        # Without this a reader cannot tell "the scanner ran and found
+        # nothing" from "the scanner never ran", and those support very
+        # different conclusions. The reproducibility manifest records only
+        # tools that produced evidence, so it cannot answer this alone.
+        executed = sorted(
+            {ref.identifier for ref in state.tool_history if ref.kind == "capability"}
+        )
+        if executed:
+            lines += ["", "**Capabilities run:** " + ", ".join(executed)]
+        elif state.artefact_ids:
+            lines += [
+                "",
+                "**Capabilities run:** none. No analysis was performed, so this "
+                "report establishes nothing about the artefacts.",
+            ]
 
         if validated:
             lines += ["", "## Findings", ""]

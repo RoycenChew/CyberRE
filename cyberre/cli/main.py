@@ -30,6 +30,7 @@ from cyberre.core.profiles.loader import (
 )
 from cyberre.core.profiles.model import ProfileNotImplementedError
 from cyberre.knowledge.re.source import StructuredKnowledgeSource
+from cyberre.runtime.env import load_env
 from cyberre.runtime.ingest import IngestionError
 from cyberre.runtime.investigation import InvestigationService
 
@@ -283,6 +284,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     parser = build_parser()
     args = parser.parse_args(argv)
+
+    # .env.example tells an operator to put credentials here, so they have
+    # to be read. The real environment is never overridden.
+    load_env(Path(args.root) / ".env")
+
     handler = args.handler
     return int(handler(args))
 

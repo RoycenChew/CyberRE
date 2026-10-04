@@ -340,9 +340,16 @@ def available_specs(*, include_unavailable: bool = True) -> Sequence[CapabilityS
 
 def _is_available(spec: CapabilitySpec) -> bool:
     if spec.capability_id == SEMGREP_SPEC.capability_id:
-        import shutil
+        # The same lookup the executor uses. A probe that disagreed with
+        # the executor would make the registry and the run differ about
+        # what is possible.
+        from cyberre.adapters.semgrep.runner import locate_semgrep
 
-        return shutil.which("semgrep") is not None
+        try:
+            locate_semgrep()
+        except SemgrepUnavailableError:
+            return False
+        return True
     if spec.capability_id == GHIDRA_SPEC.capability_id:
         try:
             locate_ghidra()

@@ -132,14 +132,35 @@ class TestTheServiceOffline:
         assert "AKIAIOSFODNN7EXAMPLE" not in outcome.report.markdown
 
     def test_a_missing_tool_makes_the_run_partial(self, project: Path) -> None:
-        """Semgrep is absent here, and the run must say so rather than
-        reporting a cleaner project than was examined."""
-        import shutil
+        """A tool that could not run must be reported, not skipped.
+
+        Branches on the adapter's own lookup rather than `shutil.which`:
+        the adapter also looks beside the interpreter, so a probe that
+        disagreed with it would assert the wrong half of this test.
+        """
+        from cyberre.adapters.semgrep.runner import (
+            SemgrepUnavailableError,
+            locate_semgrep,
+        )
 
         outcome = InvestigationService(config_root=ROOT).investigate(project, question="q")
-        if shutil.which("semgrep") is None:
+
+        try:
+            locate_semgrep()
+        except SemgrepUnavailableError:
             assert outcome.state.status is InvestigationStatus.PARTIAL
             assert any("semgrep" in note for note in outcome.notes)
+        else:
+            assert outcome.state.status is InvestigationStatus.COMPLETE
+
+    def test_capabilities_that_ran_are_reported(self, project: Path) -> None:
+        """A tool that ran and found nothing must be distinguishable from a
+        tool that never ran. The manifest records only tools that produced
+        evidence, so the report carries this separately."""
+        outcome = InvestigationService(config_root=ROOT).investigate(project, question="q")
+        assert outcome.report is not None
+        assert "Capabilities run:" in outcome.report.markdown
+        assert "secrets.scan" in outcome.report.markdown
 
     def test_the_manifest_records_what_ran(self, project: Path) -> None:
         outcome = InvestigationService(config_root=ROOT).investigate(project, question="q")

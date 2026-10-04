@@ -38,7 +38,13 @@ from cyberre.core.findings.report import Report, ReportGenerator
 from cyberre.core.findings.requirements import RequirementRegistry
 from cyberre.core.findings.validation import ValidationEngine
 from cyberre.core.models.artefact import Artefact
-from cyberre.core.models.enums import ArtefactType, Depth, InvestigationStatus, ProfileId
+from cyberre.core.models.enums import (
+    ArtefactType,
+    Depth,
+    EvidenceType,
+    InvestigationStatus,
+    ProfileId,
+)
 from cyberre.core.models.evidence import Evidence, ToolFailure
 from cyberre.core.models.finding import Finding
 from cyberre.core.models.interpretation import Interpretation
@@ -244,6 +250,22 @@ class InvestigationService:
                 f"for citing no evidence that exists"
             )
 
+        # The verification pass explains what it dropped and why. Throwing
+        # that away leaves a report saying nothing was found without saying
+        # what was considered, which reads as a cleaner result than it is.
+        for dropped in reasoning.dropped:
+            outcome.notes.append(f"considered and not supported: {dropped}")
+
+        if reasoning.hypotheses and not reasoning.candidates:
+            outcome.notes.append(
+                f"{len(reasoning.hypotheses)} hypothes"
+                f"{'is was' if len(reasoning.hypotheses) == 1 else 'es were'} "
+                f"proposed and none survived verification against the available "
+                f"evidence"
+            )
+
+        self._note_unreachable_requirements(outcome, reasoning)
+
         by_id = {e.evidence_id: e for e in outcome.evidence}
         validator = ValidationEngine()
         reviewer = AdversarialReviewer(self._model)
@@ -300,6 +322,41 @@ class InvestigationService:
             model_history=outcome.state.model_history,
         )
 
+    def _note_unreachable_requirements(
+        self, outcome: InvestigationOutcome, reasoning: ReasoningResult
+    ) -> None:
+        """Say when a hypothesis could never be established by this build.
+
+        A requirement set can demand evidence no registered capability
+        produces - CWE-78 needs data-flow and reachability, and neither is
+        implemented yet. Without this note the investigation looks like it
+        found nothing, when in fact it could not have looked.
+        """
+        producible: set[EvidenceType] = set()
+        for spec in available_specs():
+            producible |= spec.produces
+
+        # One note per class. Several hypotheses commonly share a class,
+        # and repeating the same limitation makes a report look padded.
+        seen: set[str] = set()
+        for hypothesis in reasoning.hypotheses:
+            class_key = str(hypothesis.hypothesis_class)
+            if class_key in seen or not self._requirements.covers(class_key):
+                continue
+            seen.add(class_key)
+            requirement_set = self._requirements.for_class(class_key)
+            missing = [
+                requirement.requirement_id
+                for requirement in requirement_set.mandatory
+                if not _can_produce(requirement.requirement_id, producible)
+            ]
+            if missing:
+                outcome.notes.append(
+                    f"'{class_key}' cannot be established by this build: no "
+                    f"registered capability produces the evidence for "
+                    f"{', '.join(missing)}"
+                )
+
     def _finish(self, outcome: InvestigationOutcome) -> None:
         outcome.manifest = build_manifest(
             investigation_id=outcome.state.investigation_id,
@@ -321,6 +378,23 @@ class InvestigationService:
             observations=outcome.notes,
         )
         self._store.save_state(outcome.state)
+
+
+#: Which evidence type each requirement suffix needs. Crude, and honest
+#: about being so: the alternative is asking a predicate what it wants,
+#: which it is not currently able to say.
+REQUIREMENT_EVIDENCE: dict[str, EvidenceType] = {
+    ".attacker_controlled_source": EvidenceType.DATA_FLOW,
+    ".no_sanitisation": EvidenceType.DATA_FLOW,
+    ".reachable": EvidenceType.REACHABILITY,
+}
+
+
+def _can_produce(requirement_id: str, producible: set[EvidenceType]) -> bool:
+    for suffix, needed in REQUIREMENT_EVIDENCE.items():
+        if requirement_id.endswith(suffix):
+            return needed in producible
+    return True
 
 
 def _normalise(question: str) -> str:

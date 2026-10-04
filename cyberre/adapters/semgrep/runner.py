@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -56,16 +57,31 @@ class SemgrepConfig:
 def locate_semgrep() -> str:
     """Find the Semgrep executable.
 
+    Looks on PATH first, then beside the running interpreter. A
+    pip-installed console script lands in the environment's scripts
+    directory, which is on PATH only when that environment is activated -
+    and CyberRE is frequently invoked by its absolute path, from a service
+    manager, or from a test runner, where it is not.
+
     Raises:
-        SemgrepUnavailableError: if it is not on PATH.
+        SemgrepUnavailableError: if it cannot be found. Never returns None:
+            an unscanned tree must not be reported as a clean one.
     """
-    path = shutil.which("semgrep")
-    if path is None:
-        raise SemgrepUnavailableError(
-            "semgrep is not on PATH; install it or disable the source-security "
-            "capability rather than reporting an unscanned tree as clean"
-        )
-    return path
+    found = shutil.which("semgrep")
+    if found is not None:
+        return found
+
+    scripts = Path(sys.executable).parent
+    for name in ("semgrep.exe", "semgrep"):
+        candidate = scripts / name
+        if candidate.is_file():
+            return str(candidate)
+
+    raise SemgrepUnavailableError(
+        f"semgrep was not found on PATH or in {scripts}; install it "
+        f"(pip install semgrep) or disable the source-security capability "
+        f"rather than reporting an unscanned tree as clean"
+    )
 
 
 def semgrep_version(executable: str | None = None) -> str:

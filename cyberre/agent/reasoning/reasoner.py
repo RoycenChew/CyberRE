@@ -111,7 +111,13 @@ class DiscoveryResponse(BaseModel):
 
 
 class ProposedCandidate(BaseModel):
-    hypothesis_statement: str = Field(description="Which hypothesis this is for.")
+    hypothesis_number: int = Field(
+        default=0,
+        description="The number of the hypothesis this supports, from the list given.",
+    )
+    hypothesis_statement: str = Field(
+        default="", description="The hypothesis this is for, if the number is unknown."
+    )
     title: str
     description: str = Field(description="What the evidence shows. Not what it implies.")
     cited_evidence: list[str] = Field(default_factory=list)
@@ -142,6 +148,38 @@ class ReasoningResult(BaseModel):
     model_calls: int = 0
     failed: bool = False
     failure_reason: str | None = None
+
+
+def _match_hypothesis(
+    candidate: ProposedCandidate,
+    hypotheses: Sequence[Hypothesis],
+    by_statement: dict[str, Hypothesis],
+) -> Hypothesis | None:
+    """Link a candidate back to the hypothesis it supports.
+
+    By number first, since that is what the model is asked for and what it
+    can echo reliably. Exact statement next, then the evidence it cites -
+    a candidate resting on exactly the evidence of one hypothesis is about
+    that hypothesis, whatever words it used.
+
+    Matching on prose alone was the original approach and it silently
+    discarded good candidates, because the verification pass paraphrases.
+    """
+    number = candidate.hypothesis_number
+    if 1 <= number <= len(hypotheses):
+        return hypotheses[number - 1]
+
+    exact = by_statement.get(candidate.hypothesis_statement)
+    if exact is not None:
+        return exact
+
+    cited = set(candidate.cited_evidence)
+    if cited:
+        overlapping = [h for h in hypotheses if cited & set(h.cites)]
+        if len(overlapping) == 1:
+            return overlapping[0]
+
+    return None
 
 
 def _parse_class(raw: str) -> HypothesisClass | None:
@@ -235,7 +273,7 @@ class ChiefSecurityReasoner:
                 result.rejected_for_no_citation.append(candidate.title)
                 continue
 
-            hypothesis = by_statement.get(candidate.hypothesis_statement)
+            hypothesis = _match_hypothesis(candidate, result.hypotheses, by_statement)
             if hypothesis is None:
                 # A candidate for a hypothesis that was never proposed. The
                 # verification pass must narrow the discovery pass, not
