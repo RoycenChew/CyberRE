@@ -19,6 +19,11 @@ dependencies = [
   # validated model, which is how provenance and trust levels are made
   # non-optional rather than conventional. (M1)
   "pydantic>=2.7",
+  # HTTP client for the model gateway. Confined to adapters/models. Chosen
+  # over hand-rolling urllib because timeout, retry and connection-pooling
+  # semantics are exactly the kind of thing the dependency policy says not to
+  # reimplement. (M9)
+  "httpx>=0.27",
 ]
 
 [project.optional-dependencies]

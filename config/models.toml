@@ -1,0 +1,53 @@
+# Model configuration.
+#
+# Which provider CyberRE talks to is settled here, not in code (ADR-006).
+# Credentials are named, never written: the value is read from the
+# environment at startup, so this file is safe to commit and a key is not.
+#
+# Data residency is a deployment decision with procurement consequences.
+# Evidence packets contain source code and decompiled functions, and where
+# they go is stated per provider in docs/SECURITY.md (ADR-018).
+
+[providers.deepseek]
+base_url          = "https://api.deepseek.com/v1"
+api_key_env       = "DEEPSEEK_API_KEY"
+structured_output = "json_mode"
+temperature       = 0.0
+max_retries       = 2
+
+# Zero egress. The evidence-packet budget is sized partly so a local model
+# stays viable for deployments that cannot send code to a third party.
+[providers.local]
+base_url          = "http://localhost:11434/v1"
+api_key_env       = ""
+structured_output = "json_mode"
+temperature       = 0.0
+
+[providers.openai]
+base_url          = "https://api.openai.com/v1"
+api_key_env       = "OPENAI_API_KEY"
+structured_output = "strict_schema"
+temperature       = 0.0
+
+# A subscription bridge such as OpenCode exposes a coding-agent subscription
+# as an OpenAI-compatible endpoint. Valid for local development and NOT a
+# supported deployment target: it shares rate limits with interactive use,
+# depends on undocumented internals, and would make CyberRE depend on a
+# coding agent, violating invariants 12-14 (ADR-018).
+[providers.bridge]
+base_url          = "http://localhost:4096/v1"
+api_key_env       = ""
+structured_output = "json_mode"
+temperature       = 0.0
+
+# Tiers, not models. Callers ask for a tier; this table decides what serves
+# it. The reasoner and the adversarial reviewer can sit on different models
+# without a code change - which is worth doing, since a reviewer sharing the
+# reasoner's blind spots is a weaker check.
+[tiers.fast]
+provider = "deepseek"
+model    = "deepseek-chat"
+
+[tiers.reasoning]
+provider = "deepseek"
+model    = "deepseek-reasoner"
