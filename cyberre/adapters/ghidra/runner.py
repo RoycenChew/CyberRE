@@ -25,11 +25,14 @@ from cyberre.core.models.base import stable_digest
 
 #: Where the export script lives, relative to this package.
 SCRIPT_DIR = Path(__file__).parent / "scripts"
-EXPORT_SCRIPT = "cyberre_export.py"
+EXPORT_SCRIPT = "CyberREExport.java"
 
 #: Must match SCRIPT_VERSION in the export script. Checked on parse, because
 #: a cached document from an older script is not the same evidence.
-EXPECTED_SCRIPT_VERSION = "1.0.0"
+#: 3.0.0 is the Java port (ADR-023). 1.0.0 was Jython, which Ghidra 12 does
+#: not bundle; 2.0.0 was PyGhidra, which headless only enables through a
+#: separate launcher with Python and JPype inside Ghidra's process.
+EXPECTED_SCRIPT_VERSION = "3.0.0"
 EXPECTED_SCHEMA_VERSION = 1
 
 
@@ -223,10 +226,16 @@ class GhidraHeadlessRunner:
         # analysed before it.
         workspace = Path(tempfile.mkdtemp(prefix="cyberre-ghidra-"))
         output = workspace / "export.json"
+        # analyzeHeadless takes an existing directory plus a project name;
+        # it does not create the directory itself and aborts with
+        # "Directory not found" if it is missing. Found by the real-tool
+        # tier, which is the kind of thing recorded fixtures cannot catch.
+        project_dir = workspace / "project"
+        project_dir.mkdir(parents=True, exist_ok=True)
         try:
             command = [
                 str(self._installation.headless),
-                str(workspace / "project"),
+                str(project_dir),
                 "cyberre",
                 "-import",
                 str(binary),

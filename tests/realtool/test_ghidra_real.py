@@ -20,6 +20,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -51,45 +52,87 @@ def installation() -> object:
     return _ghidra_or_skip()
 
 
+#: A program small enough to analyse quickly and specific enough to assert
+#: on. `greet` and the unchecked `strcpy` give the analysis something real
+#: to recover without making the test depend on optimiser behaviour.
+SAMPLE_SOURCE = """
+#include <stdio.h>
+#include <string.h>
+
+static void greet(const char *name) { printf("hello %s\\n", name); }
+
+int main(int argc, char **argv) {
+    char buffer[32];
+    if (argc > 1) { strcpy(buffer, argv[1]); greet(buffer); }
+    return 0;
+}
+"""
+
+
 @pytest.fixture(scope="module")
 def sample_binary(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """A small binary compiled here, so no third-party sample is involved.
+    """A small benign binary to analyse.
 
-    Compiled rather than committed: a binary in the repository is a binary
-    somebody has to trust, and this one can be rebuilt from two lines of C.
+    Compiled from two lines of C where a compiler exists, because a binary
+    whose source we control makes the assertions precise - we know `main`
+    and `greet` are in there.
+
+    Where no compiler is available, falls back to a small executable from
+    this virtual environment. That is a weaker test: we can assert the
+    export parses and carries functions, but not that any particular
+    function is present. It is still worth running, because the thing this
+    tier exists to check is that Ghidra emits what the parser expects.
+
+    Either way no third-party sample is downloaded and nothing hostile is
+    analysed.
     """
-    compiler = shutil.which("gcc") or shutil.which("cc") or shutil.which("clang")
-    if compiler is None:
-        pytest.skip("no C compiler available to build a sample binary")
-
     directory = tmp_path_factory.mktemp("ghidra-sample")
-    source = directory / "sample.c"
-    source.write_text(
-        "#include <stdio.h>\n"
-        "#include <string.h>\n"
-        'static void greet(const char *name) { printf("hello %s\\n", name); }\n'
-        "int main(int argc, char **argv) {\n"
-        "    char buffer[32];\n"
-        "    if (argc > 1) { strcpy(buffer, argv[1]); greet(buffer); }\n"
-        "    return 0;\n"
-        "}\n",
-        encoding="utf-8",
-    )
-    binary = directory / ("sample.exe" if os.name == "nt" else "sample")
-    result = subprocess.run(  # fixed argv list, shell=False
-        [compiler, "-O0", "-g", str(source), "-o", str(binary)],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if result.returncode != 0 or not binary.is_file():
-        pytest.skip(f"could not compile the sample binary: {result.stderr.strip()[:200]}")
-    return binary
+    compiler = shutil.which("gcc") or shutil.which("cc") or shutil.which("clang")
+
+    if compiler is not None:
+        source = directory / "sample.c"
+        source.write_text(
+            SAMPLE_SOURCE,
+            encoding="utf-8",
+        )
+        binary = directory / ("sample.exe" if os.name == "nt" else "sample")
+        result = subprocess.run(  # fixed argv list, shell=False
+            [compiler, "-O0", "-g", str(source), "-o", str(binary)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode == 0 and binary.is_file():
+            return binary
+
+    fallback = Path(sys.executable).parent / ("pip.exe" if os.name == "nt" else "pip")
+    if not fallback.is_file():
+        fallback = Path(sys.executable)
+    if not fallback.is_file():
+        pytest.skip("no compiler and no fallback binary available")
+
+    copied = directory / fallback.name
+    shutil.copy2(fallback, copied)
+    return copied
+
+
+@pytest.fixture(scope="module")
+def built_from_source(sample_binary: Path) -> bool:
+    """Whether the sample is the one we compiled.
+
+    Tests that assert on specific function names check this first, rather
+    than failing against a fallback binary whose contents we do not control.
+    """
+    return sample_binary.name.startswith("sample")
 
 
 class TestRealGhidraAnalysis:
     def test_headless_analysis_produces_a_parseable_export(
-        self, installation: object, sample_binary: Path, tmp_path: Path
+        self,
+        installation: object,
+        sample_binary: Path,
+        built_from_source: bool,
+        tmp_path: Path,
     ) -> None:
         """The claim fixtures cannot make: that Ghidra emits what we assume."""
         runner = GhidraHeadlessRunner(
@@ -123,7 +166,9 @@ class TestRealGhidraAnalysis:
             for e in report.evidence
             if e.evidence_type is EvidenceType.FUNCTION
         }
-        assert "main" in functions, f"expected 'main' among {sorted(functions)[:20]}"
+        assert functions, "a real analysis should recover functions"
+        if built_from_source:
+            assert "main" in functions, f"expected 'main' among {sorted(functions)[:20]}"
 
     def test_the_export_script_version_matches_the_parser(
         self, installation: object, sample_binary: Path, tmp_path: Path

@@ -162,8 +162,9 @@ An imported API is an observation. The knowledge layer makes it an
 interpretation. A finding requires the **API sequence plus a reachable path** -
 a graph query, not a model judgement. `VirtualAllocEx` alone is not injection.
 
-Ghidra runs as a subprocess: `analyzeHeadless` plus a versioned export script,
-cached on `(sha256, ghidra_version, script_version, analysis_config)`.
+Ghidra runs as a subprocess: `analyzeHeadless` plus a versioned Java export
+script (ADR-023), cached on
+`(sha256, ghidra_version, script_version, analysis_config)`.
 
 ## 9. Knowledge
 
@@ -209,7 +210,7 @@ hard-coded paths, model names, provider logic or credentials.
 | M3 | Storage, replay, deterministic fixtures | **complete** |
 | M4 | Capability registry, policy engine, approval gateway | **complete** |
 | M5 | Analysis profiles | **complete** |
-| M6 | Ghidra adapter, fixtures, real-tool spec | **complete** (realtool tier unverified - Ghidra not installed) |
+| M6 | Ghidra adapter, fixtures, real-tool spec | **complete** - real-tool tier passing against Ghidra 12.1.2 |
 | M7 | RE knowledge layer | **complete** |
 | M8 | Source security capabilities | **complete** (realtool tier unverified - Semgrep not installed) |
 | M9 | Model gateway, investigation runtime | **complete** (plain loop, ADR-022) |

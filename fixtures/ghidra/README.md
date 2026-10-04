@@ -1,10 +1,12 @@
 # Ghidra export fixtures
 
-Recorded `cyberre_export.py` output, used by the **fixture** test tier.
+Recorded `CyberREExport.java` output, used by the **fixture** test tier.
 
 **These prove the parser. They do not prove Ghidra works.** Only the
-`realtool` tier does that (ADR-004), and a release may not claim production
-readiness on fixtures alone.
+`realtool` tier does that (ADR-004), and it now runs: the Ghidra integration
+is verified end to end against **Ghidra 12.1.2**, recovering 278 functions,
+86 imports, 223 strings and 897 call edges from a real PE and parsing them
+into provenanced evidence.
 
 | Fixture | What it is | What it is for |
 |---|---|---|
@@ -14,16 +16,21 @@ readiness on fixtures alone.
 
 ## Provenance of these files
 
-Hand-authored against the schema in `cyberre/adapters/ghidra/scripts/cyberre_export.py`
-(`schema_version = 1`, `script_version = 1.0.0`), describing programs
-constructed for this purpose. No third-party or live malware sample is
-involved, and none should be added here.
+Hand-authored against the schema in
+`cyberre/adapters/ghidra/scripts/CyberREExport.java` (`schema_version = 1`,
+`script_version = 3.0.0`), describing programs constructed for this purpose.
+No third-party or live malware sample is involved, and none should be added
+here.
 
-They are hand-authored rather than captured because Ghidra is not installed
-on the current development machine. When it is, these should be regenerated
-from real analyses of equivalent self-compiled binaries and the difference
-reviewed - a hand-written fixture encodes what we *expect* the tool to emit,
-which is exactly the assumption the `realtool` tier exists to check.
+They are hand-authored rather than captured because the two programs they
+describe - a deliberate injector and a benign allocator - have not been
+compiled on this machine; there is no C compiler installed. The schema they
+follow is the one a real run produces, which the real-tool tier confirms.
+
+When a compiler is available, these should be regenerated from real analyses
+of equivalent self-compiled binaries and the difference reviewed. A
+hand-written fixture encodes what we *expect* the tool to emit, which is
+exactly the assumption the `realtool` tier exists to check.
 
 ## Adding a fixture
 

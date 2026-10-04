@@ -28,29 +28,29 @@ SHA = "a" * 64
 class TestCacheKey:
     def test_the_same_inputs_give_the_same_key(self) -> None:
         config = AnalysisConfig()
-        assert cache_key(artefact_sha256=SHA, ghidra_version="11.1.2", config=config) == cache_key(
-            artefact_sha256=SHA, ghidra_version="11.1.2", config=config
+        assert cache_key(artefact_sha256=SHA, ghidra_version="12.1.2", config=config) == cache_key(
+            artefact_sha256=SHA, ghidra_version="12.1.2", config=config
         )
 
     def test_different_bytes_give_a_different_key(self) -> None:
         config = AnalysisConfig()
-        assert cache_key(artefact_sha256=SHA, ghidra_version="11.1.2", config=config) != cache_key(
-            artefact_sha256="b" * 64, ghidra_version="11.1.2", config=config
+        assert cache_key(artefact_sha256=SHA, ghidra_version="12.1.2", config=config) != cache_key(
+            artefact_sha256="b" * 64, ghidra_version="12.1.2", config=config
         )
 
     def test_a_ghidra_upgrade_invalidates_the_cache(self) -> None:
         """A newer decompiler finds different things."""
         config = AnalysisConfig()
-        assert cache_key(artefact_sha256=SHA, ghidra_version="11.1.2", config=config) != cache_key(
+        assert cache_key(artefact_sha256=SHA, ghidra_version="12.1.2", config=config) != cache_key(
             artefact_sha256=SHA, ghidra_version="11.2.0", config=config
         )
 
     def test_a_configuration_change_invalidates_the_cache(self) -> None:
         assert cache_key(
-            artefact_sha256=SHA, ghidra_version="11.1.2", config=AnalysisConfig()
+            artefact_sha256=SHA, ghidra_version="12.1.2", config=AnalysisConfig()
         ) != cache_key(
             artefact_sha256=SHA,
-            ghidra_version="11.1.2",
+            ghidra_version="12.1.2",
             config=AnalysisConfig(analysis_timeout_seconds=60),
         )
 
@@ -63,14 +63,14 @@ class TestCacheKey:
     def test_the_script_version_is_part_of_the_key(self) -> None:
         """Without it, an export from an older script would be served as
         current - which the parser then refuses, loudly, as a bug."""
-        key = cache_key(artefact_sha256=SHA, ghidra_version="11.1.2", config=AnalysisConfig())
+        key = cache_key(artefact_sha256=SHA, ghidra_version="12.1.2", config=AnalysisConfig())
         assert EXPECTED_SCRIPT_VERSION
         # Changing the constant must change every key; proven by construction
         # rather than by mutating a module global mid-test.
         from cyberre.core.models.base import stable_digest
 
         assert key == stable_digest(
-            SHA, "11.1.2", EXPECTED_SCRIPT_VERSION, AnalysisConfig().digest()
+            SHA, "12.1.2", EXPECTED_SCRIPT_VERSION, AnalysisConfig().digest()
         )
 
 
@@ -118,7 +118,7 @@ class TestLocatingGhidra:
         properties = tmp_path / "Ghidra" / "application.properties"
         properties.parent.mkdir(parents=True)
         properties.write_text(
-            "application.name=Ghidra\napplication.version=11.1.2\n", encoding="utf-8"
+            "application.name=Ghidra\napplication.version=12.1.2\n", encoding="utf-8"
         )
         support = tmp_path / "support"
         support.mkdir()
@@ -126,7 +126,7 @@ class TestLocatingGhidra:
             (support / name).write_text("", encoding="utf-8")
 
         installation = locate_ghidra(tmp_path)
-        assert installation.version == "11.1.2"
+        assert installation.version == "12.1.2"
 
     def test_an_installation_without_a_version_is_refused(self, tmp_path: Path) -> None:
         properties = tmp_path / "Ghidra" / "application.properties"
@@ -138,7 +138,7 @@ class TestLocatingGhidra:
     def test_an_incomplete_installation_is_refused(self, tmp_path: Path) -> None:
         properties = tmp_path / "Ghidra" / "application.properties"
         properties.parent.mkdir(parents=True)
-        properties.write_text("application.version=11.1.2\n", encoding="utf-8")
+        properties.write_text("application.version=12.1.2\n", encoding="utf-8")
         with pytest.raises(GhidraUnavailableError, match="incomplete"):
             locate_ghidra(tmp_path)
 
@@ -155,6 +155,6 @@ class TestUnavailableIsNotFailure:
 
 class TestInstallationPaths:
     def test_the_headless_launcher_is_platform_appropriate(self, tmp_path: Path) -> None:
-        installation = GhidraInstallation(root=tmp_path, version="11.1.2")
+        installation = GhidraInstallation(root=tmp_path, version="12.1.2")
         assert installation.headless.name.startswith("analyzeHeadless")
         assert installation.headless.parent.name == "support"

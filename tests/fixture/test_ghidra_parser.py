@@ -113,7 +113,7 @@ class TestProvenance:
         report = parse("injector_pe.json")
         tool = report.evidence[0].provenance.tool
         assert tool.tool == "ghidra"
-        assert tool.tool_version == "11.1.2"
+        assert tool.tool_version == "12.1.2"
         assert tool.script_version == EXPECTED_SCRIPT_VERSION
 
     def test_every_piece_carries_the_artefact_hash(self) -> None:
