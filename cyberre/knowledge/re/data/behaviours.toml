@@ -1,0 +1,103 @@
+# Malware behaviour catalogue.
+#
+# A behaviour is a *candidate* interpretation. `companions` lists the calls
+# whose co-occurrence suggests it; `indicators` lists the other observable
+# signs. Neither establishes the behaviour - the validation engine requires
+# the sequence AND a reachable path connecting it (architecture section 8).
+#
+# Confidence here is confidence in the mapping - that these calls together
+# characterise this behaviour - not confidence that any given binary does it.
+
+domain = "behaviours"
+
+[[record]]
+id = "behaviour.process_injection.remote_thread"
+version = 1
+statement = "Classic remote-thread injection: open a target, allocate in it, write a payload, start a thread on it."
+source_ref = "MITRE ATT&CK T1055.002, Portable Executable Injection"
+confidence = 0.9
+category = "process_injection"
+companions = ["OpenProcess", "VirtualAllocEx", "WriteProcessMemory", "CreateRemoteThread"]
+indicators = [
+    "allocation with PAGE_EXECUTE_READWRITE",
+    "target process named in strings",
+    "SeDebugPrivilege enabled before the sequence",
+]
+attack = ["T1055.002"]
+cwe = ["CWE-94"]
+benign_explanation = "Debuggers and instrumentation frameworks perform the identical sequence. Intent is not visible in the API trace; the surrounding context carries it."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "behaviour.process_injection.apc"
+version = 1
+statement = "APC injection: queue a procedure call onto an existing thread rather than creating one."
+source_ref = "MITRE ATT&CK T1055.004, Asynchronous Procedure Call"
+confidence = 0.85
+category = "process_injection"
+companions = ["OpenThread", "VirtualAllocEx", "WriteProcessMemory", "QueueUserAPC"]
+indicators = ["thread enumeration before the queue call"]
+attack = ["T1055.004"]
+benign_explanation = "Overlapped I/O completion uses APCs routinely."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "behaviour.persistence.run_key"
+version = 1
+statement = "Persistence by writing an executable path to a registry run key."
+source_ref = "MITRE ATT&CK T1547.001, Registry Run Keys"
+confidence = 0.85
+category = "persistence"
+companions = ["RegCreateKeyExA", "RegSetValueExA"]
+indicators = [
+    "string containing Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+    "own image path retrieved via GetModuleFileName",
+]
+attack = ["T1547.001"]
+benign_explanation = "Any application offering to start at login writes the same key."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "behaviour.persistence.service"
+version = 1
+statement = "Persistence by registering a service that the system starts automatically."
+source_ref = "MITRE ATT&CK T1543.003, Windows Service"
+confidence = 0.85
+category = "persistence"
+companions = ["OpenSCManagerA", "CreateServiceA", "StartServiceA"]
+attack = ["T1543.003"]
+benign_explanation = "Service installation is what installers do."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "behaviour.credential_access.dpapi"
+version = 1
+statement = "Reading credentials protected by DPAPI, typically browser-stored passwords."
+source_ref = "MITRE ATT&CK T1555.003, Credentials from Web Browsers"
+confidence = 0.8
+category = "credential_access"
+companions = ["CryptUnprotectData"]
+indicators = [
+    "paths referencing Login Data or Local State",
+    "SQLite access alongside the decryption call",
+]
+attack = ["T1555.003"]
+benign_explanation = "A password manager or the owning browser decrypting its own data."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "behaviour.dynamic_resolution.api_hashing"
+version = 1
+statement = "Resolving imports at runtime by hashed name, to keep them out of the import table."
+source_ref = "MITRE ATT&CK T1027.007, Dynamic API Resolution"
+confidence = 0.8
+category = "dynamic_resolution"
+companions = ["LoadLibraryA", "GetProcAddress"]
+indicators = [
+    "unusually small import table for the binary size",
+    "a rotate-and-add or similar hash loop over character data",
+    "PEB walk to locate module bases",
+]
+attack = ["T1027.007"]
+benign_explanation = "Packers and licensing systems obfuscate imports for non-malicious reasons; a small import table alone is weak evidence."
+applicability = { os = ["windows"] }

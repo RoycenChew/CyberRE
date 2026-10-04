@@ -1,0 +1,71 @@
+# Compiler and runtime fingerprints.
+#
+# This table exists mainly to *suppress* findings. Compilers emit patterns
+# that look alarming to a pattern matcher and are entirely routine - stack
+# cookies, RTTI, bounds-check elision, runtime string tables. Recognising the
+# toolchain is what lets the reviewer say "that is the runtime, not the
+# program", which is one of the highest-value false-positive reductions
+# available.
+
+domain = "compilers"
+
+[[record]]
+id = "compiler.msvc"
+version = 1
+statement = "Built with the Microsoft Visual C++ toolchain."
+source_ref = "Microsoft Learn, C runtime library and PE Rich header"
+confidence = 0.85
+category = "toolchain"
+indicators = [
+    "Rich header between the DOS stub and the PE header",
+    "imports of __security_init_cookie and _initterm",
+    "sections .text .rdata .data .pdata .rsrc",
+]
+benign_explanation = "Stack cookie setup and CRT initialisation appear in every MSVC binary and are not security findings."
+applicability = { os = ["windows"], formats = ["pe"] }
+
+[[record]]
+id = "compiler.gcc"
+version = 1
+statement = "Built with GCC."
+source_ref = "GNU Compiler Collection documentation; ELF .comment section"
+confidence = 0.85
+category = "toolchain"
+indicators = [".comment section containing a GCC version string", "__libc_start_main import", "sections .init .fini .plt .got"]
+benign_explanation = "PLT and GOT indirection is normal dynamic linking, not dynamic API resolution."
+applicability = { formats = ["elf"] }
+
+[[record]]
+id = "compiler.golang"
+version = 1
+statement = "Built with the Go toolchain."
+source_ref = "Go runtime source, runtime.moduledata and pclntab"
+confidence = 0.9
+category = "runtime"
+indicators = [
+    "gopclntab section or the magic 0xFFFFFFF1",
+    "symbols prefixed runtime. and go.",
+    "a large single static binary with few imports",
+]
+benign_explanation = "Go binaries are statically linked with almost no imports, so an empty import table is expected rather than evidence of API hashing. The runtime also creates threads and maps memory at startup, which resembles injection primitives in isolation."
+
+[[record]]
+id = "compiler.rust"
+version = 1
+statement = "Built with the Rust toolchain."
+source_ref = "Rust compiler documentation; symbol mangling scheme v0"
+confidence = 0.85
+category = "runtime"
+indicators = ["_ZN mangled symbols containing core.. or alloc..", "panic handler strings carrying source paths"]
+benign_explanation = "Panic messages embed source paths, which can look like leaked build-environment information but are standard."
+
+[[record]]
+id = "compiler.dotnet"
+version = 1
+statement = "A .NET assembly, with CIL rather than native code."
+source_ref = "ECMA-335, Common Language Infrastructure"
+confidence = 0.9
+category = "runtime"
+indicators = ["COR20 header present", "import of mscoree.dll _CorExeMain", "near-empty native import table"]
+benign_explanation = "Native reverse engineering of the PE wrapper reveals almost nothing; a CIL decompiler is the right tool, and low native findings here are expected rather than a clean result."
+applicability = { formats = ["pe"] }

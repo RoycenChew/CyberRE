@@ -1,0 +1,61 @@
+# Packers and protectors.
+#
+# Packing is not malice. A large share of packed binaries are commercial
+# software protecting itself, and treating "packed" as "suspicious" is one of
+# the easiest ways to generate false positives at scale. What packing really
+# tells us is that static analysis of the packed image is unreliable - which
+# should lower confidence in other findings rather than raise suspicion.
+
+domain = "packing"
+
+[[record]]
+id = "packing.upx"
+version = 1
+statement = "UPX, an open-source executable compressor."
+source_ref = "upx.github.io, UPX documentation"
+confidence = 0.9
+category = "packer"
+indicators = ["section names UPX0 and UPX1", "very small import table", "entry point in the last section"]
+benign_explanation = "UPX is widely used to shrink legitimate binaries, and unpacking it is trivial and documented."
+
+[[record]]
+id = "packing.generic.high_entropy"
+version = 1
+statement = "A section with entropy above roughly 7.2 is compressed or encrypted."
+source_ref = "Lyda and Hamrock, Using Entropy Analysis to Find Encrypted and Packed Malware, IEEE S&P 2007"
+confidence = 0.75
+category = "indicator"
+indicators = ["section entropy above 7.2", "raw size much smaller than virtual size"]
+benign_explanation = "Embedded compressed resources, media and certificates all raise entropy without any packing."
+
+[[record]]
+id = "packing.generic.writable_executable_section"
+version = 1
+statement = "A section that is both writable and executable, as an unpacking stub needs."
+source_ref = "Microsoft PE format specification, section characteristics"
+confidence = 0.8
+category = "indicator"
+indicators = ["IMAGE_SCN_MEM_WRITE and IMAGE_SCN_MEM_EXECUTE on one section"]
+benign_explanation = "Some JIT runtimes and older toolchains emit W+X sections."
+
+[[record]]
+id = "packing.themida"
+version = 1
+statement = "Themida or WinLicense, a commercial protector with virtualisation and anti-debugging."
+source_ref = "Oreans Technologies, Themida product documentation"
+confidence = 0.8
+category = "protector"
+indicators = ["sections named .themida or .winlice", "very large entry-point function", "heavy anti-debug instrumentation"]
+benign_explanation = "Commercial software uses it to resist cracking; its presence says nothing about intent."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "packing.vmprotect"
+version = 1
+statement = "VMProtect, a commercial protector that virtualises code into a custom bytecode."
+source_ref = "VMProtect Software, product documentation"
+confidence = 0.8
+category = "protector"
+indicators = ["sections named .vmp0 and .vmp1", "interpreter dispatch loop at the entry point"]
+benign_explanation = "Widely used for licensing protection. Virtualised code resists decompilation, so any RE findings from the protected region deserve low confidence."
+applicability = { os = ["windows"] }

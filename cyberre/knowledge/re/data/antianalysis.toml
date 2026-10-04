@@ -1,0 +1,100 @@
+# Anti-analysis techniques.
+#
+# Detecting these matters twice over. They are a security signal in their own
+# right, and they also bound what the rest of the analysis is worth: a binary
+# that detects debuggers may behave differently under one, so dynamic results
+# from it deserve less weight.
+
+domain = "antianalysis"
+
+[[record]]
+id = "antianalysis.debugger.api_check"
+version = 1
+statement = "Querying the OS for an attached debugger."
+source_ref = "MITRE ATT&CK T1622, Debugger Evasion"
+confidence = 0.9
+category = "anti_debug"
+companions = ["IsDebuggerPresent", "CheckRemoteDebuggerPresent", "NtQueryInformationProcess"]
+attack = ["T1622"]
+benign_explanation = "Commercial software commonly checks, to protect licensing or to vary logging."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "antianalysis.debugger.peb_flag"
+version = 1
+statement = "Reading the BeingDebugged flag directly from the PEB, bypassing the documented API."
+source_ref = "Microsoft Learn, winternl.h, PEB structure"
+confidence = 0.85
+category = "anti_debug"
+indicators = ["fs:[0x30] or gs:[0x60] access followed by a byte test at offset 2"]
+attack = ["T1622"]
+benign_explanation = "Rare in ordinary software; reading the PEB directly is a deliberate choice to avoid the documented call."
+applicability = { os = ["windows"], architectures = ["x86"] }
+
+[[record]]
+id = "antianalysis.timing.rdtsc"
+version = 1
+statement = "Timing a region with RDTSC to detect single-stepping or instrumentation."
+source_ref = "Intel SDM, RDTSC; MITRE ATT&CK T1497.003"
+confidence = 0.8
+category = "anti_debug"
+indicators = ["paired RDTSC with a difference compared against a threshold"]
+attack = ["T1497.003"]
+benign_explanation = "RDTSC is also the obvious way to do high-resolution profiling."
+applicability = { architectures = ["x86"] }
+
+[[record]]
+id = "antianalysis.vm.artifact_strings"
+version = 1
+statement = "Looking for virtual machine artefacts in strings, devices or registry keys."
+source_ref = "MITRE ATT&CK T1497.001, System Checks"
+confidence = 0.85
+category = "anti_vm"
+indicators = ["strings such as VBOX, VMware, QEMU, virtio", "queries of SystemBiosVersion"]
+attack = ["T1497.001"]
+benign_explanation = "Licensing and performance-tuning code sometimes branches on virtualisation."
+
+[[record]]
+id = "antianalysis.vm.cpuid_hypervisor"
+version = 1
+statement = "Reading the CPUID hypervisor-present bit, or the hypervisor vendor leaf."
+source_ref = "Intel SDM, CPUID leaf 1 ECX bit 31 and leaf 0x40000000"
+confidence = 0.85
+category = "anti_vm"
+indicators = ["CPUID with EAX=0x40000000"]
+attack = ["T1497.001"]
+benign_explanation = "Hypervisor-aware software legitimately adapts its behaviour."
+applicability = { architectures = ["x86"] }
+
+[[record]]
+id = "antianalysis.sandbox.sleep_skip"
+version = 1
+statement = "Sleeping for a long interval to outlast an automated sandbox, often with a check that the sleep was not accelerated."
+source_ref = "MITRE ATT&CK T1497.003, Time Based Evasion"
+confidence = 0.8
+category = "anti_sandbox"
+companions = ["Sleep", "GetTickCount", "NtDelayExecution"]
+indicators = ["a long Sleep bracketed by GetTickCount comparisons"]
+attack = ["T1497.003"]
+benign_explanation = "Retry and backoff loops look similar; the acceleration check is the distinguishing part."
+
+[[record]]
+id = "antianalysis.disasm.opaque_predicate"
+version = 1
+statement = "Control flow that always takes one branch but cannot be resolved statically, defeating linear disassembly."
+source_ref = "Collberg et al., A Taxonomy of Obfuscating Transformations (1997)"
+confidence = 0.7
+category = "anti_disassembly"
+indicators = ["large numbers of unreachable basic blocks", "jumps into instruction interiors"]
+benign_explanation = "Compiler optimisation and hand-written assembly also produce disassembly that tools recover poorly. Weak on its own."
+
+[[record]]
+id = "antianalysis.process.parent_check"
+version = 1
+statement = "Checking the parent process to detect being launched by an analysis harness."
+source_ref = "MITRE ATT&CK T1497.001, System Checks"
+confidence = 0.75
+category = "anti_sandbox"
+companions = ["CreateToolhelp32Snapshot", "Process32First", "NtQueryInformationProcess"]
+benign_explanation = "Applications legitimately behave differently when launched from a shell versus a service."
+applicability = { os = ["windows"] }

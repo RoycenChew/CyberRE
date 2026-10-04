@@ -1,0 +1,296 @@
+# Windows API semantics.
+#
+# Each entry says what a call is useful for and - where there is one - the
+# innocent reading. Most uses of most of these are legitimate. A knowledge
+# base that omits the benign explanation trains the system toward false
+# positives, so `benign_explanation` is not optional politeness.
+#
+# `companions` is the mechanism that stops a single scary import becoming a
+# finding: validation looks for the sequence, not the symbol.
+
+domain = "apis"
+
+[[record]]
+id = "win.api.OpenProcess"
+version = 1
+statement = "Obtains a handle to another process, with requested access rights."
+source_ref = "Microsoft Learn, processthreadsapi.h, OpenProcess"
+confidence = 0.95
+category = "process"
+danger_class = "injection_primitive"
+companions = ["VirtualAllocEx", "WriteProcessMemory", "CreateRemoteThread"]
+attack = ["T1055"]
+benign_explanation = "Debuggers, profilers, task managers and crash reporters all open process handles."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "win.api.VirtualAllocEx"
+version = 1
+statement = "Allocates memory inside the address space of another process."
+source_ref = "Microsoft Learn, memoryapi.h, VirtualAllocEx"
+confidence = 0.95
+category = "memory"
+danger_class = "injection_primitive"
+companions = ["OpenProcess", "WriteProcessMemory", "CreateRemoteThread"]
+attack = ["T1055.002"]
+benign_explanation = "Debuggers and instrumentation tools stage data in a target. Also called with the handle of the calling process, which is not injection at all."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "win.api.WriteProcessMemory"
+version = 1
+statement = "Writes data into the address space of another process."
+source_ref = "Microsoft Learn, memoryapi.h, WriteProcessMemory"
+confidence = 0.95
+category = "memory"
+danger_class = "injection_primitive"
+companions = ["OpenProcess", "VirtualAllocEx", "CreateRemoteThread"]
+attack = ["T1055.002"]
+benign_explanation = "Debuggers patch breakpoints; hot-patching and modding tools write to foreign processes legitimately."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "win.api.CreateRemoteThread"
+version = 1
+statement = "Starts a thread in another process at a caller-supplied address."
+source_ref = "Microsoft Learn, processthreadsapi.h, CreateRemoteThread"
+confidence = 0.95
+category = "process"
+danger_class = "injection_primitive"
+companions = ["OpenProcess", "VirtualAllocEx", "WriteProcessMemory"]
+attack = ["T1055.002"]
+benign_explanation = "Used by debuggers to force a break, and by DLL-injection-based instrumentation such as some profilers."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "win.api.NtMapViewOfSection"
+version = 1
+statement = "Maps a section object into a process, an alternative to allocate-and-write injection."
+source_ref = "Microsoft Learn, ntifs.h, NtMapViewOfSection"
+confidence = 0.85
+category = "memory"
+danger_class = "injection_primitive"
+companions = ["NtCreateSection", "NtUnmapViewOfSection"]
+attack = ["T1055.012"]
+benign_explanation = "Shared-memory IPC and memory-mapped file access use the same primitive."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "win.api.QueueUserAPC"
+version = 1
+statement = "Queues a procedure call to another thread, executed when that thread alerts."
+source_ref = "Microsoft Learn, processthreadsapi.h, QueueUserAPC"
+confidence = 0.9
+category = "process"
+danger_class = "injection_primitive"
+companions = ["OpenThread", "VirtualAllocEx", "WriteProcessMemory"]
+attack = ["T1055.004"]
+benign_explanation = "Legitimate asynchronous I/O completion routines use APCs."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "win.api.SetWindowsHookExA"
+version = 1
+statement = "Installs a hook procedure, which can load a DLL into other processes."
+source_ref = "Microsoft Learn, winuser.h, SetWindowsHookExA"
+confidence = 0.9
+category = "process"
+danger_class = "injection_primitive"
+aliases = ["SetWindowsHookExW", "SetWindowsHookEx"]
+attack = ["T1055.011"]
+benign_explanation = "Accessibility tools, input method editors and macro utilities install hooks by design."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "win.api.LoadLibraryA"
+version = 1
+statement = "Loads a module by name at runtime."
+source_ref = "Microsoft Learn, libloaderapi.h, LoadLibraryA"
+confidence = 0.95
+category = "loader"
+danger_class = "dynamic_resolution"
+aliases = ["LoadLibraryW", "LoadLibraryExA", "LoadLibraryExW"]
+companions = ["GetProcAddress"]
+attack = ["T1129"]
+benign_explanation = "Plugin architectures, optional feature loading and delay-loaded imports are ordinary uses."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "win.api.GetProcAddress"
+version = 1
+statement = "Resolves an exported symbol address by name or ordinal at runtime."
+source_ref = "Microsoft Learn, libloaderapi.h, GetProcAddress"
+confidence = 0.95
+category = "loader"
+danger_class = "dynamic_resolution"
+companions = ["LoadLibraryA"]
+attack = ["T1129"]
+benign_explanation = "Standard for version-tolerant code that uses an API only when the host provides it."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "win.api.VirtualProtect"
+version = 1
+statement = "Changes memory protection, including making a region executable."
+source_ref = "Microsoft Learn, memoryapi.h, VirtualProtect"
+confidence = 0.95
+category = "memory"
+danger_class = "execution"
+attack = ["T1055"]
+benign_explanation = "Just-in-time compilers and hot-patching legitimately make pages writable then executable."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "win.api.RegSetValueExA"
+version = 1
+statement = "Writes a registry value, the usual mechanism for run-key persistence."
+source_ref = "Microsoft Learn, winreg.h, RegSetValueExA"
+confidence = 0.9
+category = "registry"
+danger_class = "persistence_primitive"
+aliases = ["RegSetValueExW", "RegSetValueA", "RegSetValueW"]
+companions = ["RegCreateKeyExA", "RegOpenKeyExA"]
+attack = ["T1547.001"]
+benign_explanation = "Almost every installed application writes configuration to the registry."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "win.api.CreateServiceA"
+version = 1
+statement = "Registers a Windows service, which the system starts automatically."
+source_ref = "Microsoft Learn, winsvc.h, CreateServiceA"
+confidence = 0.9
+category = "service"
+danger_class = "persistence_primitive"
+aliases = ["CreateServiceW"]
+companions = ["OpenSCManagerA", "StartServiceA"]
+attack = ["T1543.003"]
+benign_explanation = "Installers register services as a matter of course."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "win.api.CreateProcessA"
+version = 1
+statement = "Creates a new process."
+source_ref = "Microsoft Learn, processthreadsapi.h, CreateProcessA"
+confidence = 0.95
+category = "process"
+danger_class = "execution"
+aliases = ["CreateProcessW", "CreateProcessAsUserA", "ShellExecuteA", "ShellExecuteW"]
+attack = ["T1106"]
+benign_explanation = "Launching a helper process is ordinary program behaviour."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "win.api.OpenProcessToken"
+version = 1
+statement = "Opens the access token of a process, the first step in adjusting privileges."
+source_ref = "Microsoft Learn, processthreadsapi.h, OpenProcessToken"
+confidence = 0.9
+category = "token"
+danger_class = "privilege_escalation"
+companions = ["AdjustTokenPrivileges", "LookupPrivilegeValueA"]
+attack = ["T1134"]
+benign_explanation = "Backup and diagnostic tools legitimately enable privileges such as SeBackupPrivilege."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "win.api.AdjustTokenPrivileges"
+version = 1
+statement = "Enables or disables privileges in an access token."
+source_ref = "Microsoft Learn, securitybaseapi.h, AdjustTokenPrivileges"
+confidence = 0.9
+category = "token"
+danger_class = "privilege_escalation"
+companions = ["OpenProcessToken", "LookupPrivilegeValueA"]
+attack = ["T1134.001"]
+benign_explanation = "Required to enable SeDebugPrivilege or SeShutdownPrivilege for legitimate reasons."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "win.api.CryptUnprotectData"
+version = 1
+statement = "Decrypts DPAPI-protected data for the current user, including stored browser credentials."
+source_ref = "Microsoft Learn, dpapi.h, CryptUnprotectData"
+confidence = 0.9
+category = "crypto"
+danger_class = "credential_access"
+attack = ["T1555.003"]
+benign_explanation = "The application that encrypted the data is the expected caller; password managers use this legitimately."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "win.api.LsaOpenPolicy"
+version = 1
+statement = "Opens the Local Security Authority policy, which holds secrets and account rights."
+source_ref = "Microsoft Learn, ntsecapi.h, LsaOpenPolicy"
+confidence = 0.85
+category = "lsa"
+danger_class = "credential_access"
+companions = ["LsaRetrievePrivateData", "LsaEnumerateAccountRights"]
+attack = ["T1003.004"]
+benign_explanation = "Domain management and auditing tools read LSA policy."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "win.api.IsDebuggerPresent"
+version = 1
+statement = "Reports whether a user-mode debugger is attached to the calling process."
+source_ref = "Microsoft Learn, debugapi.h, IsDebuggerPresent"
+confidence = 0.95
+category = "debug"
+danger_class = "anti_analysis"
+attack = ["T1622"]
+benign_explanation = "Applications branch on it to emit extra diagnostics or skip a splash screen under a debugger."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "win.api.CheckRemoteDebuggerPresent"
+version = 1
+statement = "Reports whether a process is being debugged, including from another process."
+source_ref = "Microsoft Learn, debugapi.h, CheckRemoteDebuggerPresent"
+confidence = 0.95
+category = "debug"
+danger_class = "anti_analysis"
+companions = ["IsDebuggerPresent"]
+attack = ["T1622"]
+benign_explanation = "Anti-cheat and licensing systems use it openly."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "win.api.NtQueryInformationProcess"
+version = 1
+statement = "Queries process information, including the undocumented debug-port and debug-flags classes used for anti-debugging."
+source_ref = "Microsoft Learn, winternl.h, NtQueryInformationProcess"
+confidence = 0.85
+category = "debug"
+danger_class = "anti_analysis"
+attack = ["T1622"]
+benign_explanation = "Also the documented way to read a PEB address or a process exit status."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "win.api.InternetOpenUrlA"
+version = 1
+statement = "Opens a URL over WinINet."
+source_ref = "Microsoft Learn, wininet.h, InternetOpenUrlA"
+confidence = 0.9
+category = "network"
+danger_class = "network"
+aliases = ["InternetOpenUrlW", "HttpSendRequestA", "WinHttpSendRequest", "URLDownloadToFileA"]
+attack = ["T1071.001"]
+benign_explanation = "Update checks, telemetry and ordinary HTTP clients."
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "win.api.WSASocketA"
+version = 1
+statement = "Creates a socket, the basis of direct network communication."
+source_ref = "Microsoft Learn, winsock2.h, WSASocketA"
+confidence = 0.9
+category = "network"
+danger_class = "network"
+aliases = ["socket", "connect", "WSAConnect"]
+attack = ["T1095"]
+benign_explanation = "Any networked application."
+applicability = { os = ["windows"] }

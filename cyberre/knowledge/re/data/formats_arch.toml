@@ -1,0 +1,87 @@
+# Binary formats and architectures.
+#
+# Structural facts used to interpret the rest: which section permissions are
+# anomalous, which calling convention governs argument recovery, and where a
+# format carries its own integrity signals.
+
+domain = "formats"
+
+[[record]]
+id = "format.pe"
+version = 1
+statement = "Portable Executable, the Windows executable and DLL format."
+source_ref = "Microsoft PE Format specification"
+confidence = 0.95
+category = "format"
+indicators = ["MZ at offset 0", "PE\\0\\0 at the e_lfanew offset"]
+applicability = { os = ["windows"] }
+
+[[record]]
+id = "format.pe.tls_callback"
+version = 1
+statement = "A TLS callback runs before the entry point, so analysis that starts at the entry point misses it."
+source_ref = "Microsoft PE Format specification, the .tls section"
+confidence = 0.9
+category = "anomaly"
+indicators = ["non-empty TLS directory with callback entries"]
+benign_explanation = "Thread-local storage initialisation in C++ runtimes uses callbacks legitimately."
+applicability = { os = ["windows"], formats = ["pe"] }
+
+[[record]]
+id = "format.elf"
+version = 1
+statement = "Executable and Linkable Format, used by Linux and most Unix systems."
+source_ref = "System V Application Binary Interface, ELF specification"
+confidence = 0.95
+category = "format"
+indicators = ["0x7F followed by ELF at offset 0"]
+
+[[record]]
+id = "format.macho"
+version = 1
+statement = "Mach-O, the macOS and iOS executable format."
+source_ref = "Apple, Mach-O File Format Reference"
+confidence = 0.95
+category = "format"
+indicators = ["magic 0xFEEDFACE, 0xFEEDFACF, or 0xCAFEBABE for a universal binary"]
+applicability = { os = ["macos"] }
+
+[[record]]
+id = "format.section.rwx"
+version = 1
+statement = "A section mapped readable, writable and executable simultaneously."
+source_ref = "Microsoft PE Format specification, section characteristics"
+confidence = 0.85
+category = "anomaly"
+indicators = ["IMAGE_SCN_MEM_WRITE and IMAGE_SCN_MEM_EXECUTE together"]
+benign_explanation = "Some JIT runtimes and older toolchains emit W+X sections; it is unusual rather than conclusive."
+
+[[record]]
+id = "arch.x86_64"
+version = 1
+statement = "x86-64. Windows uses the Microsoft x64 convention (RCX, RDX, R8, R9); System V uses RDI, RSI, RDX, RCX, R8, R9."
+source_ref = "Microsoft x64 calling convention; System V AMD64 ABI"
+confidence = 0.95
+category = "architecture"
+indicators = ["push rbp; mov rbp, rsp prologue in unoptimised builds"]
+applicability = { architectures = ["x86"] }
+
+[[record]]
+id = "arch.x86"
+version = 1
+statement = "32-bit x86. Arguments are usually passed on the stack under cdecl or stdcall."
+source_ref = "Intel SDM; System V Intel386 ABI"
+confidence = 0.95
+category = "architecture"
+indicators = ["push ebp; mov ebp, esp prologue"]
+applicability = { architectures = ["x86"] }
+
+[[record]]
+id = "arch.aarch64"
+version = 1
+statement = "AArch64. The first eight arguments are passed in X0 to X7; the link register is X30."
+source_ref = "Arm, Procedure Call Standard for the Arm 64-bit Architecture"
+confidence = 0.95
+category = "architecture"
+indicators = ["stp x29, x30, [sp, #-N]! prologue"]
+applicability = { architectures = ["aarch64", "arm64"] }
