@@ -35,10 +35,22 @@ Consequences, each enforced by a test rather than by convention:
 
 ## Status
 
-Under active development. Milestone **M0 (foundation)** is complete; the
-architecture is frozen and documented in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
-No investigation capability is usable yet - see the milestone table in the
-architecture document for what lands when.
+Under active development, through **M12**. The architecture is frozen and
+documented in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+
+What works today:
+
+- The full investigation chain - evidence, interpretation, evidence packet,
+  hypothesis, validation, adversarial review, confidence, report - runs end
+  to end for both a source-security and a binary reverse-engineering case.
+  Exercise it with `pytest -m evaluation`.
+- The Ghidra integration is verified against a real Ghidra 12.1.2
+  installation, not only against fixtures.
+- `cyberre capabilities`, `cyberre profiles` and `cyberre knowledge`.
+
+What does not work yet: `cyberre investigate` against a path on disk.
+Artefact ingestion and capability registration are the remaining wiring. The
+command says so rather than half-working.
 
 ## Development
 
