@@ -106,10 +106,17 @@ LAYER_RULES: tuple[LayerRule, ...] = (
     ),
     LayerRule(
         package="cyberre.agent.logic",
-        forbidden=("cyberre.agent.graph", "langgraph", "langchain_core"),
+        forbidden=(
+            "cyberre.agent.graph",
+            "cyberre.runtime",
+            "cyberre.adapters",
+            "langgraph",
+            "langchain_core",
+        ),
         reason=(
-            "Invariant 15: agent decision logic must be callable without a workflow "
-            "engine, so the LangGraph runtime stays replaceable."
+            "Invariant 15: agent decision logic must be callable with no workflow "
+            "engine and no runtime at all, which is what keeps the loop "
+            "replaceable (ADR-022) and the decisions testable in isolation."
         ),
     ),
 )
