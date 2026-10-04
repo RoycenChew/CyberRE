@@ -1,5 +1,9 @@
 """Report generation.
 
+Output is ASCII. A report is read on whatever terminal the analyst has, and
+a Windows console in its default code page mangles typographic characters -
+a report that renders as mojibake is a report nobody trusts.
+
 The report is where the architecture's discipline either shows or is
 undone. Three rules govern it:
 
@@ -97,7 +101,7 @@ def _render_finding(finding: Finding, evidence: Mapping[str, Evidence], index: i
         f"### {index}. {finding.title}",
         "",
         f"**Status:** {STATUS_LANGUAGE.get(finding.status, finding.status.value)} "
-        f"(`{finding.status.value}`) · **Severity:** {severity} · "
+        f"(`{finding.status.value}`) | **Severity:** {severity} | "
         f"**Class:** {finding.hypothesis_class}",
         "",
         finding.description,
@@ -134,7 +138,7 @@ def _render_finding(finding: Finding, evidence: Mapping[str, Evidence], index: i
     if finding.review is not None:
         review = finding.review
         lines += [
-            f"**Adversarial review:** {review.verdict.value} — {review.rationale}",
+            f"**Adversarial review:** {review.verdict.value} - {review.rationale}",
             "",
         ]
         if review.alternative_explanation:
@@ -181,7 +185,7 @@ class ReportGenerator:
             "",
             f"**Question:** {state.objective.question}",
             "",
-            f"**Status:** {state.status.value} · **Depth:** {state.depth.value} · "
+            f"**Status:** {state.status.value} | **Depth:** {state.depth.value} | "
             f"**Generated:** {utcnow().isoformat()}",
             "",
             "## Executive summary",
@@ -250,7 +254,7 @@ class ReportGenerator:
             lines.append("Open questions:")
             lines.append("")
             for question in state.unresolved_questions:
-                lines.append(f"- {question.question} — {question.why_unresolved}")
+                lines.append(f"- {question.question} - {question.why_unresolved}")
             lines.append("")
         if not failures and not state.unresolved_questions:
             lines.append("No tool failures and no unresolved questions were recorded.")

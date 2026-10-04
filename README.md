@@ -48,9 +48,21 @@ What works today:
   installation, not only against fixtures.
 - `cyberre capabilities`, `cyberre profiles` and `cyberre knowledge`.
 
-What does not work yet: `cyberre investigate` against a path on disk.
-Artefact ingestion and capability registration are the remaining wiring. The
-command says so rather than half-working.
+- `cyberre investigate` against a path on disk, source tree or binary:
+
+```bash
+cyberre investigate "Are there command injection vulnerabilities?" --path ./project
+cyberre investigate "What does this binary do?" --binary ./sample.exe
+```
+
+  Without a configured model provider, pass `--offline`: evidence collection
+  and the deterministic half still run, and the report says plainly that
+  nothing was validated. A partial run exits 4, because absence of a finding
+  under incomplete coverage is not evidence of absence.
+
+What is not built yet: dynamic analysis in a sandbox (M13), the evaluation
+benchmark (M14), the engineering-plane contracts (M15) and enterprise
+hardening (M16).
 
 ## Development
 

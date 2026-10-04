@@ -12,23 +12,41 @@ and `core` depends on nothing but pydantic.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import sys
 from collections.abc import Sequence
 from pathlib import Path
 
+from cyberre.adapters.models.gateway import ModelConfigError, ModelGateway
+from cyberre.capabilities.builtin import available_specs
 from cyberre.capabilities.registry import InMemoryCapabilityRegistry
+from cyberre.core.contracts.model_provider import ModelProvider, ModelTier
 from cyberre.core.findings.requirements import RequirementRegistry
-from cyberre.core.models.enums import ArtefactType
-from cyberre.core.profiles.loader import ProfileRegistry, select_profiles
+from cyberre.core.models.enums import ArtefactType, Depth, ProfileId
+from cyberre.core.profiles.loader import (
+    ProfileLoadError,
+    ProfileRegistry,
+    select_profiles,
+)
+from cyberre.core.profiles.model import ProfileNotImplementedError
 from cyberre.knowledge.re.source import StructuredKnowledgeSource
+from cyberre.runtime.ingest import IngestionError
+from cyberre.runtime.investigation import InvestigationService
 
 EXIT_OK = 0
 EXIT_USAGE = 2
 EXIT_NOT_READY = 3
-"""Reserved for a command that cannot run because something is missing.
+"""The command cannot run because something is missing.
 
 Distinct from a usage error: "you asked wrongly" and "this is not wired up
 yet" should not look the same to a script.
+"""
+
+EXIT_PARTIAL = 4
+"""The investigation ran but coverage was incomplete.
+
+Non-zero on purpose. Absence of a finding in a partial run is not evidence
+of absence, and a green exit code would tell a pipeline otherwise.
 """
 
 
@@ -43,7 +61,7 @@ def cmd_capabilities(args: argparse.Namespace) -> int:
     leaves the reader to discover the gaps by hitting them.
     """
     root = Path(args.root)
-    registry = InMemoryCapabilityRegistry()
+    registry = InMemoryCapabilityRegistry(available_specs())
     profiles = _profiles(root)
     requirements = RequirementRegistry()
     knowledge = StructuredKnowledgeSource.from_directory()
@@ -132,27 +150,76 @@ def cmd_knowledge(args: argparse.Namespace) -> int:
 
 
 def cmd_investigate(args: argparse.Namespace) -> int:
-    """Run an investigation.
+    """Run an investigation over a path."""
+    target = args.source or args.binary or args.path
+    if not target:
+        print(
+            "nothing to investigate: pass a path, or --source / --binary",
+            file=sys.stderr,
+        )
+        return EXIT_USAGE
 
-    Not yet wired to the CLI. The pipeline exists and is exercised
-    end to end by the dual-slice acceptance tests, but artefact ingestion
-    and capability registration are M12 work in progress, and a command
-    that half-works is worse than one that says so.
+    question = args.question or f"What security issues are present in {target}?"
+    root = Path(args.root)
+
+    provider = _model_provider(root, offline=args.offline)
+    if provider is None and not args.offline:
+        print(
+            "No model provider is configured, so no hypotheses can be formed."
+            " Evidence collection will still run. Pass --offline to accept"
+            " that, or configure a provider in config/models.toml and set"
+            " its key.",
+            file=sys.stderr,
+        )
+
+    try:
+        service = InvestigationService(
+            model_provider=provider,
+            config_root=root,
+        )
+        outcome = service.investigate(
+            Path(target),
+            question=question,
+            depth=Depth(args.depth),
+            requested_profiles=[ProfileId(args.profile)] if args.profile else [],
+        )
+    except IngestionError as error:
+        print(f"cannot ingest {target}: {error}", file=sys.stderr)
+        return EXIT_USAGE
+    except (ProfileLoadError, ProfileNotImplementedError) as error:
+        print(str(error), file=sys.stderr)
+        return EXIT_USAGE
+
+    if outcome.report is None:
+        print("the investigation produced no report", file=sys.stderr)
+        return EXIT_NOT_READY
+
+    if args.output:
+        Path(args.output).write_text(outcome.report.markdown, encoding="utf-8")
+        print(f"report written to {args.output}")
+    else:
+        print(outcome.report.markdown)
+
+    # A partial investigation exits non-zero so a pipeline notices. Absence
+    # of a finding in a partial run is not evidence of absence, and a green
+    # exit code would say otherwise.
+    return EXIT_PARTIAL if outcome.is_partial else EXIT_OK
+
+
+def _model_provider(root: Path, *, offline: bool) -> ModelProvider | None:
+    """Resolve the reasoning provider, or None.
+
+    Returns None rather than raising when no credential is configured: the
+    deterministic half of the pipeline is still worth running, and the
+    report says plainly that nothing was validated.
     """
-    print(
-        "cyberre investigate is not available in this build.\n"
-        "\n"
-        "The investigation pipeline exists and runs end to end - evidence,\n"
-        "interpretation, hypothesis, validation, adversarial review,\n"
-        "confidence and report - and is exercised by:\n"
-        "\n"
-        "    pytest -m evaluation\n"
-        "\n"
-        "What is missing is artefact ingestion and capability registration,\n"
-        "which connect a path on disk to that pipeline.",
-        file=sys.stderr,
-    )
-    return EXIT_NOT_READY
+    if offline:
+        return None
+    try:
+        gateway = ModelGateway.from_file(root / "config" / "models.toml")
+        return gateway.provider_for(ModelTier.REASONING)
+    except ModelConfigError:
+        return None
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -186,14 +253,34 @@ def build_parser() -> argparse.ArgumentParser:
 
     investigate = subcommands.add_parser("investigate", help="run an investigation")
     investigate.add_argument("question", nargs="?", help="what to investigate")
+    investigate.add_argument("--path", help="path to analyse")
     investigate.add_argument("--source", help="path to a source tree")
     investigate.add_argument("--binary", help="path to a binary")
+    investigate.add_argument(
+        "--profile", help="force a profile, e.g. binary_re (default: inferred)"
+    )
+    investigate.add_argument("--depth", default="standard", choices=[d.value for d in Depth])
+    investigate.add_argument("--output", help="write the report here instead of stdout")
+    investigate.add_argument(
+        "--offline",
+        action="store_true",
+        help="collect evidence without a model; nothing will be validated",
+    )
     investigate.set_defaults(handler=cmd_investigate)
 
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
+    # Reports are written to stdout, and a Windows console defaults to a
+    # legacy code page. Reconfiguring here rather than restricting what a
+    # report may contain, since evidence excerpts carry whatever the
+    # artefact contained.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            with contextlib.suppress(ValueError, OSError):
+                stream.reconfigure(encoding="utf-8", errors="replace")
+
     parser = build_parser()
     args = parser.parse_args(argv)
     handler = args.handler

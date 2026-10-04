@@ -217,7 +217,7 @@ hard-coded paths, model names, provider logic or credentials.
 | M10 | Validation engine, requirement sets | **complete** |
 | M11 | Adversarial reviewer, confidence engine | **complete** |
 | M11a | Evidence context compiler, secret boundary | **complete** (gap: never had its own milestone) |
-| M12 | **Dual vertical slice** - source + binary, through validation | **complete** (replayed; `cyberre investigate` still to wire) |
+| M12 | **Dual vertical slice** - source + binary, through validation | **complete**; `cyberre investigate` runs end to end |
 | M13 | Sandbox, dynamic analysis | next |
 | M14 | Evaluation, benchmark, FP/FN, injection regression | |
 | M15 | Engineering plane foundation | |
