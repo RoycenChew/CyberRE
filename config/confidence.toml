@@ -1,0 +1,52 @@
+# Confidence weights.
+#
+# Every number CyberRE attaches to a finding comes from here and from the
+# evidence. A model never emits one (ADR-009).
+#
+# The weights are a starting point, not a result. They should be tuned
+# against the benchmark at M14 and the version bumped when they change, so
+# a finding scored under v1 can be re-examined when v2 disagrees.
+
+version = "v1"
+
+[weights]
+# How much of the requirement set was established. The dominant term,
+# because a finding missing half its requirements is half a finding
+# whatever else is true.
+evidence_completeness = 0.30
+
+# Distinct underlying observations behind the satisfied requirements. One
+# analysis establishing four facts is weaker than four analyses agreeing,
+# and the formula should say so.
+evidence_independence = 0.20
+
+# Reliability of the producing tools, from the capability registry. A
+# property of the tool, measured against the benchmark - never a per-run
+# judgement.
+tool_reliability = 0.15
+
+# Independent sources agreeing. Saturates quickly: the third corroborating
+# source adds much less than the second.
+source_corroboration = 0.10
+
+# Whether a path from an entry point was established. Weighted heavily for
+# its size because unreachable code is the most common reason a true-looking
+# finding is not one.
+reachability_established = 0.15
+
+# Complete provenance, and real-tool rather than fixture evidence.
+provenance_quality = 0.10
+
+[thresholds]
+# Below this, a finding is held for human review rather than reported. Set
+# conservatively: a low-confidence finding that reaches a report costs an
+# analyst more time than one that is withheld.
+needs_review_below = 0.45
+
+# Contradicting evidence subtracts this much per contradiction, to a floor.
+contradiction_penalty = 0.25
+contradiction_floor = 0.1
+
+# Corroboration saturation: the number of independent sources at which the
+# corroboration factor reaches 1.0.
+corroboration_saturation = 3
