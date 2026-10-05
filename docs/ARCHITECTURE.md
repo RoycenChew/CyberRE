@@ -218,7 +218,8 @@ hard-coded paths, model names, provider logic or credentials.
 | M11 | Adversarial reviewer, confidence engine | **complete** |
 | M11a | Evidence context compiler, secret boundary | **complete** (gap: never had its own milestone) |
 | M12 | **Dual vertical slice** - source + binary, through validation | **complete**; `cyberre investigate` runs end to end |
-| M13 | Sandbox, dynamic analysis | next |
+| M13 | Sandbox isolation grades, gated dynamic analysis | **complete**; grade ladder enforced, detonation refused below `HYPERVISOR` (ADR-024) |
+| M14 | Evaluation benchmark; tune confidence against measured FP/FN | next |
 | M14 | Evaluation, benchmark, FP/FN, injection regression | |
 | M15 | Engineering plane foundation | |
 | M16 | Enterprise hardening - observability, Postgres, API, SBOM | |

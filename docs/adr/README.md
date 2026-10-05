@@ -28,6 +28,7 @@ by writing a new ADR that supersedes the old one, never by editing history.
 | [021](ADR-021-profiles-in-toml.md) | Profiles are TOML, parsed with the standard library |
 | [022](ADR-022-workflow-runtime.md) | The investigation runtime is a plain loop; LangGraph stays optional (proposed) |
 | [023](ADR-023-ghidra-script-in-java.md) | The Ghidra export script is Java |
+| [024](ADR-024-sandbox-isolation-grades.md) | Sandboxes are graded, and the grade gates detonation |
 
 ADRs 013-017 record divergences from the original design document in
 [`../prompts/`](../prompts/), per the requirement that conflicts be documented

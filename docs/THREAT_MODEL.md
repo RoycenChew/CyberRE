@@ -26,6 +26,7 @@
 - A coding agent's claim cannot satisfy a validation requirement.
 - A profile cannot widen policy; effective permissions are an intersection.
 - Dynamic analysis cannot run when sandbox self-test fails.
+- A sandbox weaker than the work requires refuses; it does not warn and proceed.
 - Tool failures cannot silently become evidence.
 - Evidence cannot lose provenance during normalisation.
 - Derived evidence cannot masquerade as independent corroboration.
@@ -34,9 +35,15 @@
 
 Stated plainly, because an unstated limitation reads as a claim.
 
-1. **Container escape.** Docker on a developer workstation is a development
-   sandbox. A kernel exploit in a malware sample could escape it. Do not analyse
-   live malware on a machine you care about until M13 ships hardened isolation.
+1. **Container escape.** Still real, but no longer silent. Docker shares the
+   host kernel, so a kernel exploit escapes it, and Docker Desktop's WSL2
+   backend has published escapes to the Windows host. Rather than warn about
+   this, M13 made isolation strength a typed, ordered grade that the policy
+   engine checks: the Docker provider reports `CONTAINER` on a native Linux
+   daemon and `NONE` on a WSL2 backend, detonation requires `HYPERVISOR`, and
+   `DockerSandboxProvider.run()` raises on every host. The defence is a
+   refusal, not hardening - CyberRE cannot detonate a sample until a
+   `HYPERVISOR`-grade provider exists (ADR-024).
 2. **Malicious model provider.** A provider that returns adversarially crafted
    output is constrained by validation and the typed action channel, but is not
    otherwise detected.
@@ -46,11 +53,19 @@ Stated plainly, because an unstated limitation reads as a claim.
    protection against a deliberately expensive artefact beyond those budgets.
 6. **Ghidra as an attack surface.** Ghidra parses hostile binaries and has had
    parser vulnerabilities. V1 runs headless analysis on the host. Running it
-   inside the sandbox is tracked for a later milestone.
+   inside the sandbox is tracked for a later milestone; it is an
+   `ANALYSIS_TOOL` intent, so `CONTAINER` grade suffices and a native Linux
+   host can already provide it.
+7. **Sandbox evasion.** A sample that detects analysis and behaves differently
+   produces a confidently wrong result rather than no result. This is why
+   `SUSPECTED_EVASIVE` requires `VMI` grade - agentless introspection - which
+   nothing in V1 provides. Until it does, the honest answer is UNKNOWN.
 
 ## Residual risks accepted for V1
 
-- Development sandbox strength (see 1 above).
+- No dynamic analysis at all on this class of host (see 1 above). Accepted
+  deliberately: a container that looks like a malware sandbox is more
+  dangerous than none, because someone will trust it.
 - Knowledge-layer seed is small; absence of a signature is not evidence of
   absence, and the confidence model must never treat it as such.
 - Real-tool coverage depends on the nightly tier actually running.

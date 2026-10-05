@@ -28,6 +28,7 @@ from cyberre.core.contracts.model_provider import (
     StructuredOutputMode,
 )
 from cyberre.core.contracts.sandbox import (
+    IsolationGrade,
     SandboxPolicy,
     SandboxProvider,
     SandboxRun,
@@ -158,6 +159,10 @@ class RefusingSandbox:
     @property
     def provider_name(self) -> str:
         return "refusing"
+
+    @property
+    def isolation_grade(self) -> IsolationGrade:
+        return IsolationGrade.NONE
 
     def self_test(self, policy: SandboxPolicy) -> SandboxSelfTest:
         return SandboxSelfTest(
