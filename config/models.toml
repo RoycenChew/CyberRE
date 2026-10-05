@@ -51,3 +51,12 @@ model    = "deepseek-chat"
 [tiers.reasoning]
 provider = "deepseek"
 model    = "deepseek-reasoner"
+
+# A different model from the reasoner, for two reasons. A reviewer that
+# shares the reasoner's blind spots is a weaker check. And in practice the
+# long chain-of-thought model truncated the structured verdict a review has
+# to return, which downgraded findings that may have been sound - a failed
+# review is not a neutral event.
+[tiers.review]
+provider = "deepseek"
+model    = "deepseek-chat"

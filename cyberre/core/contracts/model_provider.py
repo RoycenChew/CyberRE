@@ -30,7 +30,21 @@ class ModelTier(StrEnum):
     """Classification, routing, extraction, summarisation."""
 
     REASONING = "reasoning"
-    """Evidence correlation, hypothesis analysis, adversarial review."""
+    """Evidence correlation and hypothesis analysis."""
+
+    REVIEW = "review"
+    """Adversarial review.
+
+    Its own tier because it is a different job with different demands. A
+    reviewer sharing the reasoner's model shares its blind spots, and the
+    two also fail differently in practice: a long chain-of-thought model
+    that suits hypothesis generation may truncate the structured verdict a
+    review has to return, and a truncated review downgrades a finding that
+    may have been sound.
+
+    Falls back to REASONING when not configured, so this is an option
+    rather than another thing that must be set up.
+    """
 
     SPECIALIST = "specialist"
     EMBEDDING = "embedding"

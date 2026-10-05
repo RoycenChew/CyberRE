@@ -176,6 +176,7 @@ def cmd_investigate(args: argparse.Namespace) -> int:
     try:
         service = InvestigationService(
             model_provider=provider,
+            review_provider=_model_provider(root, offline=args.offline, tier=ModelTier.REVIEW),
             config_root=root,
         )
         outcome = service.investigate(
@@ -207,8 +208,10 @@ def cmd_investigate(args: argparse.Namespace) -> int:
     return EXIT_PARTIAL if outcome.is_partial else EXIT_OK
 
 
-def _model_provider(root: Path, *, offline: bool) -> ModelProvider | None:
-    """Resolve the reasoning provider, or None.
+def _model_provider(
+    root: Path, *, offline: bool, tier: ModelTier = ModelTier.REASONING
+) -> ModelProvider | None:
+    """Resolve the provider for `tier`, or None.
 
     Returns None rather than raising when no credential is configured: the
     deterministic half of the pipeline is still worth running, and the
@@ -218,7 +221,7 @@ def _model_provider(root: Path, *, offline: bool) -> ModelProvider | None:
         return None
     try:
         gateway = ModelGateway.from_file(root / "config" / "models.toml")
-        return gateway.provider_for(ModelTier.REASONING)
+        return gateway.provider_for(tier)
     except ModelConfigError:
         return None
 

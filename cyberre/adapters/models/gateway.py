@@ -16,7 +16,7 @@ import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from cyberre.adapters.models.openai_compatible import (
     EndpointConfig,
@@ -143,12 +143,19 @@ class ModelGateway:
 
         return cls(providers, tiers)
 
+    #: Tiers that fall back to another when not configured. Keeps an
+    #: optional refinement from becoming a required one.
+    FALLBACKS: ClassVar[dict[ModelTier, ModelTier]] = {ModelTier.REVIEW: ModelTier.REASONING}
+
     def provider_for(self, tier: ModelTier) -> ModelProvider:
         """The provider serving `tier`, constructed once and reused."""
         if tier in self._instances:
             return self._instances[tier]
 
         if tier not in self._tiers:
+            fallback = self.FALLBACKS.get(tier)
+            if fallback is not None and fallback in self._tiers:
+                return self.provider_for(fallback)
             raise ModelConfigError(f"tier '{tier.value}' is not configured")
 
         provider_name, model = self._tiers[tier]

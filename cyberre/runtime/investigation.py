@@ -98,6 +98,7 @@ class InvestigationService:
         self,
         *,
         model_provider: ModelProvider | None = None,
+        review_provider: ModelProvider | None = None,
         object_store: ObjectStore | None = None,
         store: MemoryStore | None = None,
         profiles: ProfileRegistry | None = None,
@@ -106,6 +107,9 @@ class InvestigationService:
         config_root: Path = Path("."),
     ) -> None:
         self._model = model_provider
+        # Falls back to the reasoning provider, so a deployment that
+        # configures one model still gets a review.
+        self._review_model = review_provider if review_provider is not None else model_provider
         self._object_store = object_store if object_store is not None else MemoryObjectStore()
         self._store = store if store is not None else MemoryStore()
         self._profiles = (
@@ -268,7 +272,7 @@ class InvestigationService:
 
         by_id = {e.evidence_id: e for e in outcome.evidence}
         validator = ValidationEngine()
-        reviewer = AdversarialReviewer(self._model)
+        reviewer = AdversarialReviewer(self._review_model or self._model)
 
         for candidate in reasoning.candidates:
             hypothesis = next(

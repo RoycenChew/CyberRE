@@ -35,6 +35,25 @@ class PredicateContext:
     os_name: str | None = None
     architecture: str | None = None
 
+    def flow_sites(self, markers: frozenset[str]) -> frozenset[str]:
+        """Symbols where a flow to these sinks was observed.
+
+        Reachability has to be tied to the site it is about. Matching on
+        the sink name alone let a reachable call to `subprocess.call` in
+        one function satisfy the reachability requirement for an entirely
+        different call in another - flagged twice by adversarial review
+        before it was fixed here.
+        """
+        sites: set[str] = set()
+        for evidence in self.of_type(EvidenceType.DATA_FLOW):
+            sink = str(getattr(evidence.observation, "sink", "")).lower()
+            if not any(marker in sink for marker in markers):
+                continue
+            symbol = getattr(evidence.location, "symbol", None)
+            if symbol:
+                sites.add(str(symbol))
+        return frozenset(sites)
+
     def admissible(self) -> list[Evidence]:
         """Evidence that may satisfy a requirement at all.
 
@@ -170,18 +189,35 @@ class IsReachable(Predicate):
 
     def satisfied_by(self, context: PredicateContext) -> frozenset[str]:
         found: set[str] = set()
+        sites = context.flow_sites(self.targets)
 
         for evidence in context.of_type(EvidenceType.REACHABILITY):
             observation = evidence.observation
             target = str(getattr(observation, "target", "")).lower()
-            if getattr(observation, "reachable", False) and any(
-                marker in target for marker in self.targets
-            ):
-                found.add(evidence.evidence_id)
+            if not getattr(observation, "reachable", False):
+                continue
+            if not any(marker in target for marker in self.targets):
+                continue
+            if not self._same_site(evidence, sites):
+                continue
+            found.add(evidence.evidence_id)
 
         if not found:
             found |= self._via_graph(context)
         return frozenset(found)
+
+    @staticmethod
+    def _same_site(evidence: Evidence, sites: frozenset[str]) -> bool:
+        """Whether this reachability is about a site where a flow was seen.
+
+        When no flow carries a symbol there is nothing to tie to, so the
+        evidence is accepted - the alternative would silently reject
+        reachability from tools that do not report symbols.
+        """
+        if not sites:
+            return True
+        symbol = getattr(evidence.location, "symbol", None)
+        return symbol is None or str(symbol) in sites
 
     def _via_graph(self, context: PredicateContext) -> set[str]:
         from cyberre.core.evidence.graph import NodeKind
@@ -230,11 +266,14 @@ class ReachabilityDisproven(Predicate):
         withdraws it, and the outcome falls back to the ordinary
         requirement check.
         """
+        sites = context.flow_sites(self.targets)
         refuting: set[str] = set()
         for evidence in context.of_type(EvidenceType.REACHABILITY):
             observation = evidence.observation
             target = str(getattr(observation, "target", "")).lower()
             if not any(marker in target for marker in self.targets):
+                continue
+            if not IsReachable._same_site(evidence, sites):
                 continue
             if getattr(observation, "reachable", True):
                 return frozenset()

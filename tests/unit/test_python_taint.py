@@ -357,3 +357,85 @@ class TestEndToEndAgainstRequirements:
             graph=build_graph(evidence),
         )
         assert outcome.status is not FindingStatus.VALIDATED
+
+
+class TestReachabilityIsTiedToItsSite:
+    """Reachability must be about the site it is attached to.
+
+    Matching on the sink name alone let a reachable call to
+    subprocess.call in one function satisfy the requirement for an
+    entirely different call in another. Adversarial review flagged it
+    twice before it was fixed, which is the argument for the reviewer in
+    one example.
+    """
+
+    SOURCE = (
+        "import subprocess\n"
+        "from flask import request\n"
+        "@app.route('/p')\n"
+        "def route_ping():\n"
+        "    return ping(request.args.get('host'))\n"
+        "def ping(host):\n"
+        "    return subprocess.call('ping ' + host, shell=True)\n"
+        "def unused_helper(host):\n"
+        "    return subprocess.call('traceroute ' + host, shell=True)\n"
+    )
+
+    def _validate(self, tmp_path: Path) -> object:
+        from cyberre.core.evidence.builder import build_graph
+        from cyberre.core.findings.predicates import PredicateContext
+
+        (tmp_path / "a.py").write_text(self.SOURCE, encoding="utf-8")
+        evidence = list(
+            report_evidence(
+                analyse_tree(tmp_path),
+                investigation_id="inv-1",
+                artefact_id="ar-1",
+                artefact_sha256="a" * 64,
+            )
+        )
+        return PredicateContext(evidence=evidence, graph=build_graph(evidence))
+
+    def test_flow_sites_are_identified(self, tmp_path: Path) -> None:
+        from cyberre.core.findings.requirements import _SUBPROCESS_SINKS
+
+        context = self._validate(tmp_path)
+        sites = context.flow_sites(_SUBPROCESS_SINKS)  # type: ignore[attr-defined]
+        assert {"ping", "unused_helper"} <= sites
+
+    def test_the_unreachable_helper_does_not_validate(self, tmp_path: Path) -> None:
+        """The reachable call elsewhere in the file must not satisfy it."""
+        from cyberre.core.evidence.builder import build_graph
+        from cyberre.core.findings.requirements import RequirementRegistry
+        from cyberre.core.findings.validation import ValidationEngine
+        from cyberre.core.models.enums import FindingStatus
+        from cyberre.core.models.hypothesis import Hypothesis, HypothesisClass
+
+        (tmp_path / "a.py").write_text(self.SOURCE, encoding="utf-8")
+        report = analyse_tree(tmp_path)
+        # Only the unreachable site's evidence, as a hypothesis about it
+        # would cite.
+        evidence = [
+            e
+            for e in report_evidence(
+                report,
+                investigation_id="inv-1",
+                artefact_id="ar-1",
+                artefact_sha256="a" * 64,
+            )
+            if getattr(e.location, "symbol", None) == "unused_helper"
+        ]
+        assert evidence, "the unreachable site should still produce a flow"
+
+        outcome = ValidationEngine().validate(
+            Hypothesis(
+                investigation_id="inv-1",
+                statement="command injection in unused_helper",
+                hypothesis_class=HypothesisClass(taxonomy="cwe", identifier="78"),
+                created_by="test",
+            ),
+            RequirementRegistry().for_class("cwe:78"),
+            evidence=evidence,
+            graph=build_graph(evidence),
+        )
+        assert outcome.status is not FindingStatus.VALIDATED
