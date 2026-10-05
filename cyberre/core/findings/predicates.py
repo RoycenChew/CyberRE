@@ -217,15 +217,29 @@ class ReachabilityDisproven(Predicate):
         return "no path reaches the code from any entry point"
 
     def satisfied_by(self, context: PredicateContext) -> frozenset[str]:
-        found: set[str] = set()
+        """Only when nothing says a path *does* reach it.
+
+        An artefact commonly contains several sites calling the same sink,
+        some reachable and some not. Matching on the sink name alone let
+        one dead call refute a live one elsewhere in the same file, which
+        produced a finding whose own evidence contradicted its status -
+        caught by the adversarial reviewer, which is what it is for.
+
+        Refutation is the strongest negative the system can assert, so it
+        requires unanimity: any positive reachability for the same target
+        withdraws it, and the outcome falls back to the ordinary
+        requirement check.
+        """
+        refuting: set[str] = set()
         for evidence in context.of_type(EvidenceType.REACHABILITY):
             observation = evidence.observation
             target = str(getattr(observation, "target", "")).lower()
-            if not getattr(observation, "reachable", True) and any(
-                marker in target for marker in self.targets
-            ):
-                found.add(evidence.evidence_id)
-        return frozenset(found)
+            if not any(marker in target for marker in self.targets):
+                continue
+            if getattr(observation, "reachable", True):
+                return frozenset()
+            refuting.add(evidence.evidence_id)
+        return frozenset(refuting)
 
 
 @dataclass(frozen=True)

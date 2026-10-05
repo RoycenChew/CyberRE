@@ -201,11 +201,23 @@ def _summarise(evidence: Evidence) -> tuple[str, bool]:
         )
     elif kind is EvidenceType.DATA_FLOW:
         sanitizers = getattr(observation, "sanitizers", ())
+        # Steps are rendered, not summarised away. They carry how the
+        # value reaches the sink - concatenated into a command string
+        # versus passed as its own argv element - which is the fact that
+        # decides whether the flow is exploitable. Dropping it left a
+        # reviewer correctly objecting that exploitability was unproven.
+        steps = getattr(observation, "steps", ())
+        excerpt = getattr(observation, "excerpt", None)
         text = (
             f"{getattr(observation, 'source', '')} -> "
-            f"{getattr(observation, 'sink', '')} "
+            f"{getattr(observation, 'sink', '')}"
+            f"{' via ' + ' -> '.join(steps) if steps else ''} "
             f"sanitizers={list(sanitizers) or 'none observed'}"
+            f"{' | code: ' + excerpt if excerpt else ''}"
         )
+        # The excerpt is artefact content, so this line is fenced even
+        # though a data-flow observation otherwise is not.
+        untrusted = untrusted or bool(excerpt)
     elif kind is EvidenceType.REACHABILITY:
         text = (
             f"{getattr(observation, 'target', '')} "

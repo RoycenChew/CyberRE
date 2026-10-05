@@ -256,7 +256,7 @@ class InvestigationService:
         for dropped in reasoning.dropped:
             outcome.notes.append(f"considered and not supported: {dropped}")
 
-        if reasoning.hypotheses and not reasoning.candidates:
+        if reasoning.hypotheses and not reasoning.candidates and not reasoning.failed:
             outcome.notes.append(
                 f"{len(reasoning.hypotheses)} hypothes"
                 f"{'is was' if len(reasoning.hypotheses) == 1 else 'es were'} "

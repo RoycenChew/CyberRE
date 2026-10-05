@@ -169,9 +169,13 @@ def _evidence_line(evidence: Evidence) -> str:
         detail = f"rule={getattr(observation, 'rule_id', '')} {_fence(getattr(observation, 'message', ''))}"
     elif evidence.evidence_type is EvidenceType.DATA_FLOW:
         sanitizers = getattr(observation, "sanitizers", ())
+        steps = getattr(observation, "steps", ())
+        excerpt = getattr(observation, "excerpt", None)
         detail = (
             f"{getattr(observation, 'source', '')} -> {getattr(observation, 'sink', '')}"
+            f"{' via ' + ' -> '.join(steps) if steps else ''}"
             f" sanitizers={list(sanitizers) or 'none observed'}"
+            f"{' | code: ' + _fence(excerpt) if excerpt else ''}"
         )
     elif evidence.evidence_type is EvidenceType.REACHABILITY:
         detail = (
@@ -208,7 +212,19 @@ def build_packet(
     the strongest case against is the difference between a review and a
     rubber stamp.
     """
-    used = [evidence[eid] for eid in outcome.satisfied_evidence_ids if eid in evidence]
+    # Everything the outcome touched, not only what satisfied a
+    # requirement. A refuted or unsatisfied outcome has no satisfied
+    # evidence at all, and a reviewer handed an empty EVIDENCE block
+    # cannot review anything - it reported exactly that, which is how
+    # this was found.
+    referenced: list[str] = [
+        *candidate.cited_evidence,
+        *outcome.satisfied_evidence_ids,
+    ]
+    for result in outcome.results:
+        referenced.extend(result.evidence_ids)
+
+    used = [evidence[eid] for eid in dict.fromkeys(referenced) if eid in evidence]
 
     counters: list[str] = []
     for interpretation in interpretations:
@@ -256,10 +272,25 @@ class AdversarialReviewer:
         *,
         tier: ModelTier = ModelTier.REASONING,
         require_citations: bool = True,
+        max_output_tokens: int = 8192,
+        timeout_seconds: int = 240,
     ) -> None:
+        """
+        Args:
+            max_output_tokens: larger than the gateway default, which is
+                tuned for a fast-tier classification call. A reviewer
+                working through the false-positive checklist against a
+                full evidence packet writes at length, and a truncated
+                response is a failed review - which downgrades a finding
+                that may well have been sound.
+            timeout_seconds: likewise, since reasoning models think
+                before they answer.
+        """
         self._provider = provider
         self._tier = tier
         self._require_citations = require_citations
+        self._max_output_tokens = max_output_tokens
+        self._timeout_seconds = timeout_seconds
 
     def review(self, packet: ReviewPacket, *, known_evidence_ids: frozenset[str]) -> ReviewResult:
         """Run the review.
@@ -280,6 +311,8 @@ class AdversarialReviewer:
                 schema=ReviewResponse,
                 tier=self._tier,
                 prompt_template_version=PROMPT_TEMPLATE_VERSION,
+                max_output_tokens=self._max_output_tokens,
+                timeout_seconds=self._timeout_seconds,
             )
         except ModelFailureError as error:
             return ReviewResult(

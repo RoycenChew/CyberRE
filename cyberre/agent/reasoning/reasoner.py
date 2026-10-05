@@ -207,10 +207,25 @@ class ChiefSecurityReasoner:
         *,
         tier: ModelTier = ModelTier.REASONING,
         max_hypotheses: int = 10,
+        max_output_tokens: int = 8192,
+        timeout_seconds: int = 240,
     ) -> None:
+        """
+        Args:
+            max_output_tokens: larger than the gateway default. A reasoning
+                model weighing several hypotheses against an evidence
+                packet produces a long answer, and a truncated one is a
+                failed call - which costs the whole investigation its
+                reasoning rather than part of it.
+            timeout_seconds: likewise. Reasoning models think before they
+                answer, and the generic default is tuned for a fast-tier
+                classification call.
+        """
         self._provider = provider
         self._tier = tier
         self._max_hypotheses = max_hypotheses
+        self._max_output_tokens = max_output_tokens
+        self._timeout_seconds = timeout_seconds
 
     def reason(self, packet: EvidencePacket, *, investigation_id: str) -> ReasoningResult:
         """Run both passes over `packet`."""
@@ -308,6 +323,8 @@ class ChiefSecurityReasoner:
                 schema=DiscoveryResponse,
                 tier=self._tier,
                 prompt_template_version=DISCOVERY_TEMPLATE_VERSION,
+                max_output_tokens=self._max_output_tokens,
+                timeout_seconds=self._timeout_seconds,
             ).value
         except ModelFailureError:
             # Returning None rather than an empty response: "the model call
@@ -336,6 +353,8 @@ class ChiefSecurityReasoner:
                 schema=VerificationResponse,
                 tier=self._tier,
                 prompt_template_version=VERIFICATION_TEMPLATE_VERSION,
+                max_output_tokens=self._max_output_tokens,
+                timeout_seconds=self._timeout_seconds,
             ).value
         except ModelFailureError:
             return None

@@ -84,6 +84,20 @@ class DataFlowPath(DomainModel):
     why it is recorded here rather than inferred later.
     """
 
+    excerpt: str | None = None
+    """The sink line as written.
+
+    An analyser's summary of a flow is a claim about code; the line itself
+    is the code. A reviewer asked to judge whether a value is interpolated
+    into a command or passed as an argv element cannot do it from a label,
+    and said so.
+
+    This is artefact content and is fenced as untrusted wherever it is
+    rendered.
+    """
+
+    excerpt_is_untrusted: Literal[True] = True
+
 
 class ReachabilityObservation(DomainModel):
     kind: Literal["reachability"] = "reachability"

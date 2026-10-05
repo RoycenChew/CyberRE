@@ -212,7 +212,7 @@ hard-coded paths, model names, provider logic or credentials.
 | M5 | Analysis profiles | **complete** |
 | M6 | Ghidra adapter, fixtures, real-tool spec | **complete** - real-tool tier passing against Ghidra 12.1.2 |
 | M7 | RE knowledge layer | **complete** |
-| M8 | Source security capabilities | **complete** (realtool tier unverified - Semgrep not installed) |
+| M8 | Source security capabilities | **complete** - Semgrep 1.179.0 installed; taint analysis added |
 | M9 | Model gateway, investigation runtime | **complete** (plain loop, ADR-022) |
 | M10 | Validation engine, requirement sets | **complete** |
 | M11 | Adversarial reviewer, confidence engine | **complete** |

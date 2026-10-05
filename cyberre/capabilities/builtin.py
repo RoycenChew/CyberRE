@@ -21,6 +21,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from cyberre.adapters.dataflow import python_taint
+from cyberre.adapters.dataflow.evidence import report_evidence
 from cyberre.adapters.deps import manifests
 from cyberre.adapters.ghidra.parser import build_provenance as ghidra_provenance
 from cyberre.adapters.ghidra.parser import parse_export
@@ -121,6 +123,28 @@ DEPS_SPEC = CapabilitySpec(
     information_gain_prior=0.5,
 )
 
+DATAFLOW_SPEC = CapabilitySpec(
+    capability_id="source.data_flow",
+    name="Python taint and reachability",
+    description=(
+        "Traces attacker-influenced input to dangerous operations, records "
+        "sanitisers on the path, and says whether the code is reachable."
+    ),
+    artefact_types=SOURCE_TYPES,
+    produces=frozenset({EvidenceType.DATA_FLOW, EvidenceType.REACHABILITY}),
+    cost=CapabilityCost(seconds=10.0),
+    # Syntactic and intraprocedural with one level of propagation. It
+    # narrows an investigation rather than settling one, and the
+    # reliability says so.
+    reliability=0.65,
+    risk_level=RiskLevel.L1_LOCAL_STATIC,
+    # The highest prior of the source capabilities: these are the two
+    # evidence types every taint requirement set demands and nothing else
+    # produces.
+    information_gain_prior=0.9,
+    timeout_seconds=300,
+)
+
 GHIDRA_SPEC = CapabilitySpec(
     capability_id="ghidra.analyze_binary",
     name="Ghidra analysis",
@@ -147,6 +171,7 @@ BUILTIN_SPECS: tuple[CapabilitySpec, ...] = (
     SEMGREP_SPEC,
     SECRETS_SPEC,
     DEPS_SPEC,
+    DATAFLOW_SPEC,
     GHIDRA_SPEC,
 )
 
@@ -189,6 +214,27 @@ def run_dependencies(context: CapabilityContext, artefact: Artefact) -> Capabili
             tool=manifests.TOOL_NAME, tool_version=manifests.PARSER_VERSION
         ),
         partial=bool(failures),
+    )
+
+
+def run_dataflow(context: CapabilityContext, artefact: Artefact) -> CapabilityResult:
+    target = context.root if context.root.is_dir() else context.root.parent
+    report = python_taint.analyse_tree(target)
+    evidence = report_evidence(
+        report,
+        investigation_id=context.investigation_id,
+        artefact_id=artefact.artefact_id,
+        artefact_sha256=artefact.sha256,
+    )
+    return CapabilityResult(
+        capability_id=DATAFLOW_SPEC.capability_id,
+        evidence=tuple(evidence),
+        tool_provenance=ToolProvenance(
+            tool=python_taint.TOOL_NAME, tool_version=python_taint.ANALYSER_VERSION
+        ),
+        # A file that would not parse was not analysed, which is a coverage
+        # gap rather than a clean file.
+        partial=report.is_partial,
     )
 
 
@@ -281,6 +327,7 @@ def _store(context: CapabilityContext, document: object) -> str | None:
 
 EXECUTORS = {
     SEMGREP_SPEC.capability_id: run_semgrep,
+    DATAFLOW_SPEC.capability_id: run_dataflow,
     SECRETS_SPEC.capability_id: run_secrets,
     DEPS_SPEC.capability_id: run_dependencies,
     GHIDRA_SPEC.capability_id: run_ghidra,
