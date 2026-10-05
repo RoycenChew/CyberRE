@@ -122,7 +122,12 @@ def command_injection_evidence() -> list[Evidence]:
             location=SourceLocation(path="app/views.py", start_line=42),
         ),
         evidence(
-            DataFlowPath(source="request.args", sink="subprocess.call", steps=("host",)),
+            DataFlowPath(
+                source="request.args",
+                sink="subprocess.call",
+                steps=("host",),
+                source_is_external=True,
+            ),
             tool="dataflow",
             key="k-flow",
         ),
@@ -257,6 +262,7 @@ class TestIncompleteEvidence:
                     source="request.args",
                     sink="cursor.execute",
                     sanitizers=("parameterised query",),
+                    source_is_external=True,
                 ),
                 tool="dataflow",
                 key="k-flow",
@@ -388,7 +394,7 @@ class TestCorroboration:
         shared = "one-and-the-same"
         return [
             evidence(
-                DataFlowPath(source="request", sink="subprocess.call"),
+                DataFlowPath(source="request", sink="subprocess.call", source_is_external=True),
                 tool="dataflow",
                 key=shared,
             ),

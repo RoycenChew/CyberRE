@@ -28,6 +28,7 @@ from cyberre.core.findings.predicates import (
     IsReachable,
     Predicate,
     ReachabilityDisproven,
+    SourceIsAttackerControlled,
 )
 from cyberre.core.models.base import DomainModel, NonEmptyStr
 from cyberre.core.models.enums import EvidenceType
@@ -111,10 +112,7 @@ def taint_requirement_set(
             ),
             Requirement(
                 requirement_id=f"{set_id}.attacker_controlled_source",
-                predicate=HasDataFlow(
-                    sink_markers=sink_markers,
-                    label="attacker-controlled input reaches the sink",
-                ),
+                predicate=SourceIsAttackerControlled(sink_markers=sink_markers),
             ),
             Requirement(
                 requirement_id=f"{set_id}.no_sanitisation",
@@ -183,6 +181,9 @@ _SQL_SINKS = frozenset({"execute", "query", "cursor", "raw", "sql"})
 _PATH_SINKS = frozenset({"open", "read", "write", "path", "join", "file"})
 _DESERIALISE_SINKS = frozenset({"loads", "pickle", "unserialize", "yaml", "marshal"})
 _MEMORY_SINKS = frozenset({"strcpy", "memcpy", "sprintf", "gets", "strcat", "alloca"})
+# Exact names rather than substrings: "exec" would match "execute" and
+# steal every SQL flow into the code-injection set.
+_CODE_SINKS = frozenset({"eval", "exec", "compile"})
 
 
 def _cve_applicability() -> RequirementSet:
@@ -251,6 +252,13 @@ def default_requirement_sets() -> dict[str, RequirementSet]:
             cwe_ids=frozenset({"CWE-22"}),
             sink_markers=_PATH_SINKS,
             sink_label="a filesystem path is constructed from input",
+        ),
+        taint_requirement_set(
+            set_id="req.cwe.94",
+            hypothesis_class="cwe:94",
+            cwe_ids=frozenset({"CWE-94", "CWE-95"}),
+            sink_markers=_CODE_SINKS,
+            sink_label="input is interpreted as code",
         ),
         taint_requirement_set(
             set_id="req.cwe.502",

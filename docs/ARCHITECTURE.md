@@ -219,9 +219,8 @@ hard-coded paths, model names, provider logic or credentials.
 | M11a | Evidence context compiler, secret boundary | **complete** (gap: never had its own milestone) |
 | M12 | **Dual vertical slice** - source + binary, through validation | **complete**; `cyberre investigate` runs end to end |
 | M13 | Sandbox isolation grades, gated dynamic analysis | **complete**; grade ladder enforced, detonation refused below `HYPERVISOR` (ADR-024) |
-| M14 | Evaluation benchmark; tune confidence against measured FP/FN | next |
-| M14 | Evaluation, benchmark, FP/FN, injection regression | |
-| M15 | Engineering plane foundation | |
+| M14 | Evaluation benchmark; confidence measured against FP/FN | **complete**; 22-case corpus, 3 defects found and fixed (ADR-025) |
+| M15 | Engineering plane foundation | next |
 | M16 | Enterprise hardening - observability, Postgres, API, SBOM | |
 
 Validation (M10) and review (M11) precede the first demonstration (M12) by

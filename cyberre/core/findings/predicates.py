@@ -145,6 +145,36 @@ class HasDataFlow(Predicate):
 
 
 @dataclass(frozen=True)
+class SourceIsAttackerControlled(Predicate):
+    """A flow to the sink whose source is outside the trust boundary.
+
+    Separate from :class:`HasDataFlow`, which only asks whether a flow
+    reaches the sink at all. Both requirements previously used
+    HasDataFlow, so a requirement set that looked like four checks was
+    really three, and "attacker-controlled source" was satisfied by any
+    flow whatsoever - including one starting at an internal parameter
+    with a constant default. The benchmark found it; this is the fix.
+    """
+
+    sink_markers: frozenset[str]
+
+    @property
+    def description(self) -> str:
+        return "the source of the flow is attacker-controlled"
+
+    def satisfied_by(self, context: PredicateContext) -> frozenset[str]:
+        found: set[str] = set()
+        for evidence in context.of_type(EvidenceType.DATA_FLOW):
+            observation = evidence.observation
+            sink = str(getattr(observation, "sink", "")).lower()
+            if not any(marker in sink for marker in self.sink_markers):
+                continue
+            if getattr(observation, "source_is_external", False):
+                found.add(evidence.evidence_id)
+        return frozenset(found)
+
+
+@dataclass(frozen=True)
 class FlowIsUnsanitised(Predicate):
     """A data-flow path with no sanitiser on it.
 

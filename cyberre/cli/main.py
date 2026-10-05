@@ -150,6 +150,57 @@ def cmd_knowledge(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def cmd_benchmark(args: argparse.Namespace) -> int:
+    """Measure detection quality against the labelled corpus (ADR-025).
+
+    Deterministic and offline: no model is in the loop, because nothing
+    a model says decides an outcome and benchmarking its phrasing would
+    cost money to learn nothing.
+    """
+    from cyberre.core.findings.confidence import ConfidenceConfig
+    from cyberre.evaluation.corpus import Corpus, Split
+    from cyberre.evaluation.harness import run_benchmark
+    from cyberre.evaluation.report import render
+    from cyberre.evaluation.tuning import confirm_on_holdout, tune
+
+    corpus_path = Path(args.corpus)
+    if not corpus_path.is_file():
+        print(f"no corpus at {corpus_path}")
+        return EXIT_NOT_READY
+
+    corpus = Corpus.load(corpus_path)
+    config = ConfidenceConfig.load(Path(args.config))
+
+    split = Split(args.split) if args.split else None
+    result = run_benchmark(corpus, config=config, split=split, label=args.split or "full")
+    print(render(result, corpus=corpus))
+
+    if args.tune:
+        print()
+        print("TUNING (training split only)")
+        tuned = tune(corpus, baseline_config=config)
+        print(tuned.render())
+        if tuned.improved:
+            _, candidate, held = confirm_on_holdout(
+                corpus, baseline_config=config, weights=tuned.best_weights
+            )
+            print()
+            print(
+                f"Holdout check: {'held up' if held else 'did NOT hold up'} "
+                f"(score {candidate.score:.4f})"
+            )
+            if held:
+                print("Proposed weights (not written - bump the version if you adopt them):")
+                for name, value in sorted(tuned.best_weights.items()):
+                    print(f"  {name} = {value}")
+            else:
+                print("Fitted to the training cases. Do not adopt.")
+
+    # A failing case is a result, not an error: the benchmark ran. It
+    # exits non-zero only so CI can gate on it.
+    return EXIT_OK if not result.failures() else EXIT_PARTIAL
+
+
 def cmd_investigate(args: argparse.Namespace) -> int:
     """Run an investigation over a path."""
     target = args.source or args.binary or args.path
@@ -271,6 +322,25 @@ def build_parser() -> argparse.ArgumentParser:
         help="collect evidence without a model; nothing will be validated",
     )
     investigate.set_defaults(handler=cmd_investigate)
+
+    benchmark = subcommands.add_parser(
+        "benchmark", help="measure detection quality against the labelled corpus"
+    )
+    benchmark.add_argument(
+        "--corpus", default=str(Path("benchmark") / "corpus.toml"), help="corpus manifest"
+    )
+    benchmark.add_argument(
+        "--config", default=str(Path("config") / "confidence.toml"), help="confidence weights"
+    )
+    benchmark.add_argument(
+        "--split", choices=["train", "holdout"], help="restrict to one split (default: both)"
+    )
+    benchmark.add_argument(
+        "--tune",
+        action="store_true",
+        help="search for better weights; proposes, never writes",
+    )
+    benchmark.set_defaults(handler=cmd_benchmark)
 
     return parser
 

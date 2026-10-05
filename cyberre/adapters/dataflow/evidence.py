@@ -17,6 +17,7 @@ from collections.abc import Sequence
 
 from cyberre.adapters.dataflow.python_taint import (
     ANALYSER_VERSION,
+    SOURCE_DESCRIPTIONS,
     TOOL_NAME,
     AnalysisReport,
     ModuleAnalysis,
@@ -114,6 +115,11 @@ def module_evidence(
                     # judge whether it was the right one.
                     sanitizers=flow.sanitisers,
                     excerpt=flow.excerpt,
+                    # The analyser owns the source table, so it decides
+                    # this. A flow still reading "parameter 'x'" after
+                    # propagation means no tainted caller was found, and
+                    # an unresolved parameter is not attacker-controlled.
+                    source_is_external=flow.source in SOURCE_DESCRIPTIONS,
                 ),
                 location=location,
                 provenance=provenance,

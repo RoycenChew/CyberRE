@@ -98,6 +98,19 @@ class DataFlowPath(DomainModel):
 
     excerpt_is_untrusted: Literal[True] = True
 
+    source_is_external: bool = False
+    """Whether `source` is genuinely outside the trust boundary.
+
+    Set by the analyser, which has the source table; never inferred in
+    core by matching on the description, because that would make the
+    domain layer parse an adapter's prose.
+
+    Defaults to False - fail closed. A flow beginning at an unresolved
+    function parameter is not attacker-controlled merely because nothing
+    proved otherwise, and the benchmark caught exactly that case being
+    reported as a command injection.
+    """
+
 
 class ReachabilityObservation(DomainModel):
     kind: Literal["reachability"] = "reachability"

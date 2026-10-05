@@ -1,0 +1,162 @@
+# The labelled benchmark corpus (ADR-025).
+#
+# Ground truth is a human judgement, so every label carries the reason for
+# it. A corpus whose labels cannot be argued with is a corpus nobody can
+# check, and a wrong label is indistinguishable from a wrong analyser.
+#
+# `vulnerable` is the label. `split` is derived, not written: the harness
+# assigns it by hash of the case id so that adding a case cannot move an
+# existing one between training and holdout.
+#
+# Roughly half these cases are negatives, and the negatives are not easy
+# ones. A corpus of obvious injections measures nothing - every case here
+# has a tainted value, a sink, or both.
+
+version = "v1"
+analyser = "python_taint"
+
+# ---------------------------------------------------------------- positives
+
+[[case]]
+id = "tp_command_injection_direct"
+file = "cases/tp_command_injection_direct.py"
+vulnerable = true
+cwe = "CWE-78"
+why = "A query parameter is concatenated into an os.system string. No escaping anywhere."
+
+[[case]]
+id = "tp_command_injection_via_local"
+file = "cases/tp_command_injection_via_local.py"
+vulnerable = true
+cwe = "CWE-78"
+why = "Same flow with one assignment in between; tests that taint survives a local binding."
+
+[[case]]
+id = "tp_sql_injection_fstring"
+file = "cases/tp_sql_injection_fstring.py"
+vulnerable = true
+cwe = "CWE-89"
+why = "A form field is interpolated into SQL text rather than bound as a parameter."
+
+[[case]]
+id = "tp_code_injection_eval"
+file = "cases/tp_code_injection_eval.py"
+vulnerable = true
+cwe = "CWE-94"
+why = "A JSON body reaches eval. Arbitrary expression execution."
+
+[[case]]
+id = "tp_deserialisation_pickle"
+file = "cases/tp_deserialisation_pickle.py"
+vulnerable = true
+cwe = "CWE-502"
+why = "pickle.loads on request data is remote code execution by construction."
+
+[[case]]
+id = "tp_command_injection_cookie"
+file = "cases/tp_command_injection_cookie.py"
+vulnerable = true
+cwe = "CWE-78"
+why = "A cookie is attacker-controlled. Treating it as trusted is a common error."
+
+[[case]]
+id = "tp_command_injection_interprocedural"
+file = "cases/tp_command_injection_interprocedural.py"
+vulnerable = true
+cwe = "CWE-78"
+why = "Taint crosses one call boundary - exactly the analyser's documented propagation limit, so this case guards it."
+
+[[case]]
+id = "tp_sql_injection_concat_header"
+file = "cases/tp_sql_injection_concat_header.py"
+vulnerable = true
+cwe = "CWE-89"
+why = "A header concatenated into an INSERT."
+
+[[case]]
+id = "tp_yaml_load_body"
+file = "cases/tp_yaml_load_body.py"
+vulnerable = true
+cwe = "CWE-502"
+why = "yaml.load without SafeLoader constructs arbitrary Python objects."
+
+[[case]]
+id = "tp_command_injection_argv"
+file = "cases/tp_command_injection_argv.py"
+vulnerable = true
+cwe = "CWE-78"
+why = "sys.argv is a source. A CLI tool is not exempt because it is not a web app."
+
+# ----------------------------------------------------------- hard negatives
+
+[[case]]
+id = "tn_parameterised_query"
+file = "cases/tn_parameterised_query.py"
+vulnerable = false
+why = "Tainted input DOES reach cursor.execute, but as a bound parameter. The value is never parsed as SQL. This is the single most common false positive in SQL injection scanning."
+
+[[case]]
+id = "tn_shlex_quote_applied"
+file = "cases/tn_shlex_quote_applied.py"
+vulnerable = false
+why = "Tainted, reaches a shell sink, and is correctly quoted. Flagging this would mean the sanitiser table does nothing."
+
+[[case]]
+id = "tn_sanitiser_applied_by_caller"
+file = "cases/tn_sanitiser_applied_by_caller.py"
+vulnerable = false
+why = "The sanitiser is applied at the call site rather than inside the callee. The analyser genuinely had this bug; the case exists so it cannot return."
+
+[[case]]
+id = "tn_int_cast"
+file = "cases/tn_int_cast.py"
+vulnerable = false
+why = "int() cannot return a shell metacharacter. A type coercion is a sanitiser even though it does not look like one."
+
+[[case]]
+id = "tn_unreachable_flow"
+file = "cases/tn_unreachable_flow.py"
+vulnerable = false
+why = "A real-looking flow in a private function with no entry point and no caller. Unreachable code is the most common reason a true-looking finding is not one."
+
+[[case]]
+id = "tn_constant_command"
+file = "cases/tn_constant_command.py"
+vulnerable = false
+why = "A command sink with an entirely constant argv. The sink is present; the taint is not."
+
+[[case]]
+id = "tn_logging_not_a_sink"
+file = "cases/tn_logging_not_a_sink.py"
+vulnerable = false
+why = "Tainted input reaching a parameterised logging call. Log injection is a separate, lesser class and is not what this analyser claims to find."
+
+[[case]]
+id = "tn_basename_applied"
+file = "cases/tn_basename_applied.py"
+vulnerable = false
+why = "os.path.basename strips directory traversal before the command is built."
+
+[[case]]
+id = "tn_internal_constant_source"
+file = "cases/tn_internal_constant_source.py"
+vulnerable = false
+why = "A function parameter with a module-constant default, never reached from outside. A parameter is not a source - another bug the analyser once had."
+
+[[case]]
+id = "tn_safe_yaml_load"
+file = "cases/tn_safe_yaml_load.py"
+vulnerable = false
+why = "yaml.safe_load, one character away from the sink by name and entirely different in effect. Tests that sink matching is exact."
+
+[[case]]
+id = "tn_subprocess_list_no_shell"
+file = "cases/tn_subprocess_list_no_shell.py"
+vulnerable = false
+why = "Tainted input as an argv element with shell=False. It cannot start a second command. Genuinely arguable - worth an analyst's glance - but not CWE-78, and the label says so rather than hedging."
+
+[[case]]
+id = "tn_escaped_html_output"
+file = "cases/tn_escaped_html_output.py"
+vulnerable = false
+why = "Tainted and escaped, and never reaching an execution sink at all."

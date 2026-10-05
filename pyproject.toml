@@ -47,7 +47,11 @@ src = ["cyberre", "devplane", "tests"]
 # Ghidra scripts run inside Ghidra's Jython 2.7 interpreter against injected
 # globals. They are not part of this interpreter's world and must not be
 # linted or type-checked against it.
-extend-exclude = ["cyberre/adapters/ghidra/scripts"]
+# The benchmark corpus is test DATA, not source. Its cases are
+# deliberately badly written - that is what they are for - and letting
+# a formatter reorder an import or rewrite a %-format would change what
+# the analyser sees and silently move the measurement.
+extend-exclude = ["cyberre/adapters/ghidra/scripts", "benchmark/cases"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B", "A", "C4", "SIM", "TID", "RUF"]
@@ -59,7 +63,7 @@ ban-relative-imports = "all"
 [tool.mypy]
 python_version = "3.12"
 packages = ["cyberre", "devplane"]
-exclude = ["cyberre/adapters/ghidra/scripts/"]
+exclude = ["cyberre/adapters/ghidra/scripts/", "benchmark/cases/"]
 warn_unused_configs = true
 warn_redundant_casts = true
 warn_unused_ignores = true

@@ -3,9 +3,21 @@
 # Every number CyberRE attaches to a finding comes from here and from the
 # evidence. A model never emits one (ADR-009).
 #
-# The weights are a starting point, not a result. They should be tuned
-# against the benchmark at M14 and the version bumped when they change, so
-# a finding scored under v1 can be re-examined when v2 disagrees.
+# These weights were measured at M14 and LEFT UNCHANGED, deliberately.
+#
+# The benchmark (ADR-025) found a weight set scoring +0.03 higher that held
+# up on the holdout split. It was rejected. Detection was identical - F1 1.0
+# either way - and the entire gain came from raising every positive from
+# 0.885 to 0.954, which improves the calibration term only because no case
+# in the corpus is flagged incorrectly. That is a property of the corpus,
+# not a better scorer, and the tuner now refuses such results itself.
+#
+# What the benchmark did establish is a regression floor: run
+# `cyberre benchmark` and a change that makes detection worse fails.
+#
+# Retune when the corpus contains positives that *should* score low - a flow
+# behind a weak sanitiser, a finding resting on one tool. Bump the version
+# when the weights change, so a finding scored under v1 can be re-examined.
 
 version = "v1"
 

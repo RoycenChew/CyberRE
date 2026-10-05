@@ -53,6 +53,11 @@ SOURCES: dict[str, str] = {
     "os.getenv": "environment variable",
 }
 
+#: The distinct descriptions in SOURCES, as a set. A flow whose source is
+#: one of these began outside the trust boundary; anything else - most
+#: importantly an unresolved "parameter 'x'" - did not.
+SOURCE_DESCRIPTIONS: frozenset[str] = frozenset(SOURCES.values())
+
 #: Dangerous operations, and the weakness class each belongs to. The class
 #: matters because it decides which requirement set the resulting evidence
 #: can contribute to.
@@ -402,8 +407,17 @@ class _FunctionAnalyser(ast.NodeVisitor):
                 continue
 
             how = [self._how_reached(argument)]
+            applied = list(sanitisers)
             if category == "command":
-                how.append("shell=True" if self._shell_enabled(node) else "shell=False")
+                shell = self._shell_enabled(node)
+                how.append("shell=True" if shell else "shell=False")
+                if not shell and isinstance(argument, ast.List | ast.Tuple):
+                    # An argv element with no shell cannot introduce a
+                    # second command: there is no shell to parse the
+                    # metacharacters. That is a mitigating control, not
+                    # merely context, so it belongs with the sanitisers
+                    # where FlowIsUnsanitised will see it.
+                    applied.append("argv element with shell=False")
 
             self.flows.append(
                 Flow(
@@ -411,7 +425,7 @@ class _FunctionAnalyser(ast.NodeVisitor):
                     sink=name,
                     sink_category=category,
                     steps=tuple(how),
-                    sanitisers=tuple(sanitisers),
+                    sanitisers=tuple(applied),
                     line=node.lineno,
                     function=self._function.name,
                 )

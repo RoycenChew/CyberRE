@@ -88,7 +88,7 @@ def complete_case() -> list[Evidence]:
             key="k-sink",
         ),
         evidence(
-            DataFlowPath(source="request.args", sink="subprocess.call"),
+            DataFlowPath(source="request.args", sink="subprocess.call", source_is_external=True),
             tool="dataflow",
             key="k-flow",
         ),
@@ -179,7 +179,7 @@ class TestFactors:
                 key="shared",
             ),
             evidence(
-                DataFlowPath(source="request", sink="subprocess.call"),
+                DataFlowPath(source="request", sink="subprocess.call", source_is_external=True),
                 tool="dataflow",
                 key="shared",
             ),
@@ -378,6 +378,7 @@ class TestTheReviewPacket:
                     source="request",
                     sink="cursor.execute",
                     sanitizers=("parameterised",),
+                    source_is_external=True,
                 ),
                 tool="dataflow",
                 key="k-flow",
