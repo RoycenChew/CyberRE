@@ -31,3 +31,10 @@ objectstore/
 
 # Analysis scratch
 scratch/
+
+# Ghidra install. Third-party binaries, hundreds of megabytes, and
+# reproducible from the NSA release page - the version and SHA-256 are
+# pinned in ADR-023 and the runner verifies them before use. These were
+# committed by mistake at M9 and stripped from history: GitHub rejects
+# any file over 100 MB, so the repository could not be pushed at all.
+ghidra/
